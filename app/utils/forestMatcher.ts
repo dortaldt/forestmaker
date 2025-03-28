@@ -1,65 +1,66 @@
-import { Forest } from '../data/forests';
+import { Forest, forests } from '../data/forests';
 
-interface SoundProfile {
-  id: string;
-  value: number;
+export interface SoundProfile {
+  wind: number;
+  rain: number;
+  birds: number;
+  thunder: number;
+  water: number;
+  insects: number;
+  mammals: number;
+  fire: number;
+  ambient: number;
+  spiritual: number;
 }
 
-// Update to include all possible sound types
-type SoundType = 'wind' | 'rain' | 'birds' | 'thunder' | 'water' | 'insects' | 'mammals' | 'fire' | 'ambient' | 'spiritual';
+export type SoundType = keyof SoundProfile;
 
-export function findMatchingForest(sounds: { [key: string]: number }): Forest {
-  // Convert sounds object to array format and filter for active sounds
-  const soundProfile: SoundProfile[] = Object.entries(sounds)
-    .filter(([_, value]) => value > 0) // Only consider active sounds
-    .map(([id, value]) => ({
-      id,
-      value: value // Use the direct value from the slider
-    }));
-
-  console.log('Active sounds:', soundProfile);
-
+export function findMatchingForest(sounds: SoundProfile, activeSounds: Set<SoundType>): Forest {
   // If no sounds are active, return the first forest
-  if (soundProfile.length === 0) {
-    return require('../data/forests').forests[0];
+  if (activeSounds.size === 0) {
+    return forests[0];
   }
 
-  // Find the forest with the closest match
-  const forests = require('../data/forests').forests;
-  let bestMatch = forests[0];
-  let bestScore = -Infinity;
-
-  forests.forEach((forest: Forest) => {
-    const score = calculateMatchScore(soundProfile, forest);
-    console.log(`Forest ${forest.name} score:`, score);
-    if (score > bestScore) {
-      bestScore = score;
-      bestMatch = forest;
-    }
+  // Create a filtered sound profile with only active sounds
+  const activeSoundProfile: Partial<SoundProfile> = {};
+  activeSounds.forEach(sound => {
+    activeSoundProfile[sound] = sounds[sound];
   });
 
-  console.log('Forest match:', bestMatch.name, 'Score:', bestScore);
-  return bestMatch;
+  // Calculate match scores for each forest
+  const matchScores = forests.map((forest: Forest) => ({
+    forest,
+    score: calculateMatchScore(activeSoundProfile, forest.soundProfile, activeSounds)
+  }));
+
+  // Sort by score and return the best match
+  matchScores.sort((a: { forest: Forest; score: number }, b: { forest: Forest; score: number }) => b.score - a.score);
+  return matchScores[0].forest;
 }
 
-function calculateMatchScore(sounds: SoundProfile[], forest: Forest): number {
-  let score = 0;
-  let totalWeight = 0;
-  
-  sounds.forEach(sound => {
-    // Only consider sounds that exist in both profiles
-    if (sound.id in forest.soundProfile) {
-      const forestValue = forest.soundProfile[sound.id as SoundType];
-      // Calculate similarity based on how close the values are
-      const difference = Math.abs(sound.value - forestValue);
-      // Use a more forgiving similarity calculation
-      const similarity = 1 - (difference * 0.5); // Reduce the impact of differences
-      score += similarity;
-      totalWeight += 1;
-    }
+function calculateMatchScore(
+  userSounds: Partial<SoundProfile>,
+  forestSounds: SoundProfile,
+  activeSounds: Set<SoundType>
+): number {
+  let totalScore = 0;
+  let weightSum = 0;
+
+  // Only consider active sounds
+  activeSounds.forEach(sound => {
+    const userValue = userSounds[sound] || 0;
+    const forestValue = forestSounds[sound];
+    
+    // Calculate similarity (1 - difference)
+    const similarity = 1 - Math.abs(userValue - forestValue);
+    
+    // Weight based on how active the sound is
+    const weight = userValue;
+    
+    totalScore += similarity * weight;
+    weightSum += weight;
   });
 
-  // Normalize score
-  const normalizedScore = totalWeight > 0 ? score / totalWeight : 0;
-  return normalizedScore;
+  // Normalize the score
+  return weightSum > 0 ? totalScore / weightSum : 0;
 } 
