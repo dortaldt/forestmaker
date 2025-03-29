@@ -3,13 +3,7 @@ export interface Forest {
   name: string;
   location: string;
   vibe: string;
-  description: string;
   imageUrl: string;
-  colorScheme: {
-    primary: string;
-    secondary: string;
-    accent: string;
-  };
   soundProfile: {
     wind: number;
     rain: number;
@@ -30,13 +24,7 @@ export const forests: Forest[] = [
     name: 'Amazon Rainforest',
     location: 'South America',
     vibe: 'Lush, vibrant, and teeming with life',
-    description: 'One of the most biodiverse places on Earth, teeming with bird calls, insects, and sudden rainfall.',
-    imageUrl: '/assets/images/forest1.png',
-    colorScheme: {
-      primary: '#2D5A27',
-      secondary: '#1A3D17',
-      accent: '#8BC34A'
-    },
+    imageUrl: '/assets/images/Amazon.jpg',
     soundProfile: {
       wind: 0.2,    // Light wind due to dense canopy
       rain: 0.8,    // Heavy rainfall
@@ -55,13 +43,7 @@ export const forests: Forest[] = [
     name: 'Black Forest',
     location: 'Germany',
     vibe: 'Mysterious, ancient, and enchanting',
-    description: 'This ancient European woodland is known for its dense pine trees and moody atmosphere.',
-    imageUrl: '/assets/images/forest2.png',
-    colorScheme: {
-      primary: '#1B5E20',
-      secondary: '#0A280E',
-      accent: '#4CAF50'
-    },
+    imageUrl: '/assets/images/Black.png',
     soundProfile: {
       wind: 0.7,    // Strong winds through pines
       rain: 0.6,    // Moderate rainfall
@@ -80,13 +62,7 @@ export const forests: Forest[] = [
     name: 'Redwood Forest',
     location: 'California',
     vibe: 'Majestic, peaceful, and awe-inspiring',
-    description: 'Towering trees and peaceful wildlife make this forest feel like a natural cathedral.',
-    imageUrl: '/assets/images/forest3.png',
-    colorScheme: {
-      primary: '#3E2723',
-      secondary: '#1B0000',
-      accent: '#795548'
-    },
+    imageUrl: '/assets/images/Redwood.png',
     soundProfile: {
       wind: 0.8,    // Strong coastal winds
       rain: 0.5,    // Moderate rainfall
@@ -105,13 +81,7 @@ export const forests: Forest[] = [
     name: 'Boreal Forest',
     location: 'Canada',
     vibe: 'Serene, vast, and pristine',
-    description: 'A vast coniferous forest stretching across the northern hemisphere, quiet and frigid.',
-    imageUrl: '/assets/images/forest4.png',
-    colorScheme: {
-      primary: '#3E2723',
-      secondary: '#1B0000',
-      accent: '#795548'
-    },
+    imageUrl: '/assets/images/Boreal.png',
     soundProfile: {
       wind: 0.9,    // Strong northern winds
       rain: 0.4,    // Light rainfall
@@ -126,203 +96,288 @@ export const forests: Forest[] = [
     }
   },
   {
-    id: 'tropical',
-    name: 'Tropical Rainforest',
-    location: 'Costa Rica',
-    vibe: 'Vibrant, diverse, and energetic',
-    description: 'An ancient rainforest brushing up against the sea, home to exotic birds and reptiles.',
-    imageUrl: '/assets/images/forest5.png',
-    colorScheme: {
-      primary: '#1B5E20',
-      secondary: '#0A280E',
-      accent: '#4CAF50'
-    },
+    id: 'taiga',
+    name: 'Taiga Forest',
+    location: 'Russia',
+    vibe: 'Cold, vast, and resilient',
+    imageUrl: '/assets/images/Taiga.png',
     soundProfile: {
-      wind: 0.3,    // Light wind
-      rain: 0.9,    // Heavy rainfall
-      birds: 0.9,   // Many bird species
-      thunder: 0.8, // Frequent thunderstorms
-      water: 0.7,   // Many streams
-      insects: 0.9, // Abundant insects
-      mammals: 0.8, // Many mammals
-      fire: 0.1,    // Rare fires
-      ambient: 0.9, // Rich ambient sounds
-      spiritual: 0.4 // Moderate spiritual presence
+      wind: 0.8,    // Strong winds
+      rain: 0.3,    // Light rainfall
+      birds: 0.3,   // Few birds
+      thunder: 0.2, // Rare thunderstorms
+      water: 0.2,   // Some streams
+      insects: 0.2, // Few insects
+      mammals: 0.5, // Some mammals
+      fire: 0.2,    // Occasional fires
+      ambient: 0.4, // Quiet ambient sounds
+      spiritual: 0.3 // Light spiritual presence
     }
   },
   {
-    id: 'hoh',
-    name: 'Hoh Rainforest',
-    location: 'Washington, USA',
-    vibe: 'Mossy, mystical, wet',
-    description: 'A temperate rainforest shrouded in mist and moss with rich rainfall and tranquil streams.',
-    imageUrl: '/assets/images/forest1.png',
-    colorScheme: {
-      primary: '#1B5E20',
-      secondary: '#0A280E',
-      accent: '#4CAF50'
-    },
+    id: 'sundarbans',
+    name: 'Sundarbans',
+    location: 'Bangladesh/India',
+    vibe: 'Mysterious, wet, and wild',
+    imageUrl: '/assets/images/Sundarbans.png',
     soundProfile: {
-      wind: 30,
-      rain: 90,
-      thunder: 30,
-      water: 80,
-      birds: 60,
-      insects: 40,
-      mammals: 30,
-      fire: 10,
-      ambient: 50,
-      spiritual: 25
+      wind: 0.4,    // Moderate winds
+      rain: 0.8,    // Heavy rainfall
+      birds: 0.7,   // Many birds
+      thunder: 0.6, // Frequent storms
+      water: 0.9,   // Extensive waterways
+      insects: 0.8, // Many insects
+      mammals: 0.6, // Various mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.7, // Rich ambient sounds
+      spiritual: 0.5 // Moderate spiritual presence
+    }
+  },
+  {
+    id: 'aokigahara',
+    name: 'Aokigahara',
+    location: 'Japan',
+    vibe: 'Silent, mysterious, and haunting',
+    imageUrl: '/assets/images/Aokigahara.png',
+    soundProfile: {
+      wind: 0.3,    // Light winds
+      rain: 0.5,    // Moderate rainfall
+      birds: 0.2,   // Few birds
+      thunder: 0.3, // Occasional storms
+      water: 0.2,   // Some streams
+      insects: 0.3, // Few insects
+      mammals: 0.2, // Few mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.9, // Very quiet ambient sounds
+      spiritual: 0.9 // Strong spiritual presence
+    }
+  },
+  {
+    id: 'tongass',
+    name: 'Tongass Forest',
+    location: 'Alaska',
+    vibe: 'Ancient, wet, and wild',
+    imageUrl: '/assets/images/Tongass.png',
+    soundProfile: {
+      wind: 0.7,    // Strong coastal winds
+      rain: 0.8,    // Heavy rainfall
+      birds: 0.6,   // Coastal birds
+      thunder: 0.4, // Occasional storms
+      water: 0.7,   // Many streams
+      insects: 0.4, // Moderate insects
+      mammals: 0.7, // Many mammals
+      fire: 0.2,    // Rare fires
+      ambient: 0.6, // Rich ambient sounds
+      spiritual: 0.5 // Moderate spiritual presence
+    }
+  },
+  {
+    id: 'jiuzhaigou',
+    name: 'Jiuzhaigou Valley',
+    location: 'China',
+    vibe: 'Colorful, peaceful, and magical',
+    imageUrl: '/assets/images/Jiuzhaigou.png',
+    soundProfile: {
+      wind: 0.4,    // Light winds
+      rain: 0.5,    // Moderate rainfall
+      birds: 0.6,   // Many birds
+      thunder: 0.3, // Occasional storms
+      water: 0.8,   // Many waterfalls
+      insects: 0.5, // Moderate insects
+      mammals: 0.4, // Some mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.7, // Peaceful ambient sounds
+      spiritual: 0.6 // Moderate spiritual presence
+    }
+  },
+  {
+    id: 'crooked',
+    name: 'Crooked Forest',
+    location: 'Poland',
+    vibe: 'Mysterious, unique, and enchanting',
+    imageUrl: '/assets/images/Crooked.png',
+    soundProfile: {
+      wind: 0.6,    // Moderate winds
+      rain: 0.4,    // Light rainfall
+      birds: 0.5,   // Moderate birds
+      thunder: 0.3, // Occasional storms
+      water: 0.2,   // Some streams
+      insects: 0.4, // Moderate insects
+      mammals: 0.3, // Few mammals
+      fire: 0.2,    // Rare fires
+      ambient: 0.6, // Mysterious ambient sounds
+      spiritual: 0.7 // Strong spiritual presence
+    }
+  },
+  {
+    id: 'drakensberg',
+    name: 'Drakensberg Forest',
+    location: 'South Africa',
+    vibe: 'Dramatic, ancient, and diverse',
+    imageUrl: '/assets/images/Drakensberg.png',
+    soundProfile: {
+      wind: 0.7,    // Strong mountain winds
+      rain: 0.6,    // Moderate rainfall
+      birds: 0.7,   // Many birds
+      thunder: 0.5, // Occasional storms
+      water: 0.5,   // Some streams
+      insects: 0.6, // Many insects
+      mammals: 0.5, // Various mammals
+      fire: 0.3,    // Occasional fires
+      ambient: 0.6, // Rich ambient sounds
+      spiritual: 0.6 // Moderate spiritual presence
+    }
+  },
+  {
+    id: 'valdivian',
+    name: 'Valdivian Forest',
+    location: 'Chile',
+    vibe: 'Ancient, wet, and mysterious',
+    imageUrl: '/assets/images/Valdivian.png',
+    soundProfile: {
+      wind: 0.5,    // Moderate winds
+      rain: 0.8,    // Heavy rainfall
+      birds: 0.6,   // Many birds
+      thunder: 0.4, // Occasional storms
+      water: 0.7,   // Many streams
+      insects: 0.5, // Moderate insects
+      mammals: 0.4, // Some mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.7, // Mysterious ambient sounds
+      spiritual: 0.5 // Moderate spiritual presence
+    }
+  },
+  {
+    id: 'sinharaja',
+    name: 'Sinharaja Forest',
+    location: 'Sri Lanka',
+    vibe: 'Lush, diverse, and ancient',
+    imageUrl: '/assets/images/Sinharaja.png',
+    soundProfile: {
+      wind: 0.3,    // Light winds
+      rain: 0.8,    // Heavy rainfall
+      birds: 0.8,   // Many birds
+      thunder: 0.6, // Frequent storms
+      water: 0.6,   // Many streams
+      insects: 0.8, // Many insects
+      mammals: 0.5, // Various mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.7, // Rich ambient sounds
+      spiritual: 0.4 // Light spiritual presence
+    }
+  },
+  {
+    id: 'hou',
+    name: 'Hou Forest',
+    location: 'China',
+    vibe: 'Ancient, peaceful, and mystical',
+    imageUrl: '/assets/images/Hou.png',
+    soundProfile: {
+      wind: 0.4,    // Light winds
+      rain: 0.5,    // Moderate rainfall
+      birds: 0.5,   // Moderate birds
+      thunder: 0.3, // Occasional storms
+      water: 0.4,   // Some streams
+      insects: 0.4, // Moderate insects
+      mammals: 0.3, // Few mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.6, // Peaceful ambient sounds
+      spiritual: 0.7 // Strong spiritual presence
     }
   },
   {
     id: 'bialowieza',
     name: 'Białowieża Forest',
     location: 'Poland/Belarus',
-    vibe: 'Ancient, cool, biodiverse',
-    description: 'One of the last primeval forests in Europe, filled with bison, birds, and mystery.',
-    imageUrl: '/assets/images/forest2.png',
-    colorScheme: {
-      primary: '#2D5A27',
-      secondary: '#1A3D17',
-      accent: '#8BC34A'
-    },
+    vibe: 'Ancient, wild, and pristine',
+    imageUrl: '/assets/images/bialowieza.jpg',
     soundProfile: {
-      wind: 40,
-      rain: 50,
-      thunder: 20,
-      water: 30,
-      birds: 60,
-      insects: 50,
-      mammals: 50,
-      fire: 20,
-      ambient: 40,
-      spiritual: 20
+      wind: 0.5,    // Moderate winds
+      rain: 0.4,    // Light rainfall
+      birds: 0.6,   // Many birds
+      thunder: 0.3, // Occasional storms
+      water: 0.3,   // Some streams
+      insects: 0.5, // Many insects
+      mammals: 0.7, // Many mammals
+      fire: 0.2,    // Rare fires
+      ambient: 0.6, // Rich ambient sounds
+      spiritual: 0.5 // Moderate spiritual presence
     }
   },
   {
     id: 'daintree',
-    name: 'Daintree Rainforest',
+    name: 'Daintree Forest',
     location: 'Australia',
-    vibe: 'Tropical, coastal, alive',
-    description: 'An ancient rainforest brushing up against the sea, home to exotic birds and reptiles.',
-    imageUrl: '/assets/images/forest3.png',
-    colorScheme: {
-      primary: '#1B5E20',
-      secondary: '#0A280E',
-      accent: '#4CAF50'
-    },
+    vibe: 'Ancient, diverse, and vibrant',
+    imageUrl: '/assets/images/Daintree.jpg',
     soundProfile: {
-      wind: 30,
-      rain: 70,
-      thunder: 40,
-      water: 60,
-      birds: 80,
-      insects: 90,
-      mammals: 20,
-      fire: 0,
-      ambient: 30,
-      spiritual: 20
-    }
-  },
-  {
-    id: 'taiga',
-    name: 'Taiga (Boreal Forest)',
-    location: 'Siberia',
-    vibe: 'Cold, sparse, remote',
-    description: 'A vast coniferous forest stretching across the northern hemisphere, quiet and frigid.',
-    imageUrl: '/assets/images/forest1.png',
-    colorScheme: {
-      primary: '#3E2723',
-      secondary: '#1B0000',
-      accent: '#795548'
-    },
-    soundProfile: {
-      wind: 70,
-      rain: 20,
-      thunder: 10,
-      water: 10,
-      birds: 30,
-      insects: 10,
-      mammals: 40,
-      fire: 30,
-      ambient: 60,
-      spiritual: 10
+      wind: 0.4,    // Light winds
+      rain: 0.7,    // Heavy rainfall
+      birds: 0.8,   // Many birds
+      thunder: 0.5, // Occasional storms
+      water: 0.5,   // Some streams
+      insects: 0.8, // Many insects
+      mammals: 0.5, // Various mammals
+      fire: 0.2,    // Occasional fires
+      ambient: 0.7, // Rich ambient sounds
+      spiritual: 0.4 // Light spiritual presence
     }
   },
   {
     id: 'congo',
     name: 'Congo Rainforest',
     location: 'Central Africa',
-    vibe: 'Hot, wild, rhythmic',
-    description: 'Deep jungle filled with insect life, rhythmic rain, and primal musical echoes.',
-    imageUrl: '/assets/images/forest2.png',
-    colorScheme: {
-      primary: '#2D5A27',
-      secondary: '#1A3D17',
-      accent: '#8BC34A'
-    },
+    vibe: 'Dense, mysterious, and alive',
+    imageUrl: '/assets/images/Congo.png',
     soundProfile: {
-      wind: 20,
-      rain: 80,
-      thunder: 30,
-      water: 40,
-      birds: 60,
-      insects: 90,
-      mammals: 50,
-      fire: 10,
-      ambient: 40,
-      spiritual: 70
+      wind: 0.2,    // Light wind
+      rain: 0.8,    // Heavy rainfall
+      birds: 0.8,   // Many birds
+      thunder: 0.6, // Frequent storms
+      water: 0.6,   // Many streams
+      insects: 0.9, // Many insects
+      mammals: 0.8, // Many mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.8, // Rich ambient sounds
+      spiritual: 0.4 // Moderate spiritual presence
     }
   },
   {
-    id: 'aokigahara',
-    name: 'Aokigahara Forest',
+    id: 'bear',
+    name: 'Great Bear Rainforest',
+    location: 'Canada',
+    vibe: 'Wild, coastal, and pristine',
+    imageUrl: '/assets/images/Bear.jpg',
+    soundProfile: {
+      wind: 0.7,    // Strong coastal winds
+      rain: 0.8,    // Heavy rainfall
+      birds: 0.6,   // Coastal birds
+      thunder: 0.4, // Occasional storms
+      water: 0.7,   // Coastal waters
+      insects: 0.4, // Moderate insects
+      mammals: 0.7, // Many mammals
+      fire: 0.2,    // Rare fires
+      ambient: 0.6, // Rich ambient sounds
+      spiritual: 0.5 // Moderate spiritual presence
+    }
+  },
+  {
+    id: 'yakushima',
+    name: 'Yakushima Forest',
     location: 'Japan',
-    vibe: 'Eerie, silent, spiritual',
-    description: 'A haunting forest at the foot of Mount Fuji, steeped in silence and folklore.',
-    imageUrl: '/assets/images/forest3.png',
-    colorScheme: {
-      primary: '#1B5E20',
-      secondary: '#0A280E',
-      accent: '#4CAF50'
-    },
+    vibe: 'Ancient, mystical, and serene',
+    imageUrl: '/assets/images/Yakushima.jpg',
     soundProfile: {
-      wind: 10,
-      rain: 30,
-      thunder: 0,
-      water: 10,
-      birds: 20,
-      insects: 10,
-      mammals: 20,
-      fire: 0,
-      ambient: 60,
-      spiritual: 90
-    }
-  },
-  {
-    id: 'sundarbans',
-    name: 'Sundarbans Mangrove Forest',
-    location: 'Bangladesh/India',
-    vibe: 'Muddy, humid, wild',
-    description: 'A tidal mangrove forest, echoing with birds and tigers, interlaced with flowing water.',
-    imageUrl: '/assets/images/forest1.png',
-    colorScheme: {
-      primary: '#2D5A27',
-      secondary: '#1A3D17',
-      accent: '#8BC34A'
-    },
-    soundProfile: {
-      wind: 30,
-      rain: 60,
-      thunder: 50,
-      water: 90,
-      birds: 70,
-      insects: 80,
-      mammals: 50,
-      fire: 0,
-      ambient: 30,
-      spiritual: 20
+      wind: 0.5,    // Moderate winds
+      rain: 0.8,    // Heavy rainfall
+      birds: 0.5,   // Moderate birds
+      thunder: 0.4, // Occasional storms
+      water: 0.6,   // Many streams
+      insects: 0.4, // Moderate insects
+      mammals: 0.3, // Few mammals
+      fire: 0.1,    // Rare fires
+      ambient: 0.7, // Peaceful ambient sounds
+      spiritual: 0.8 // Strong spiritual presence
     }
   }
 ]; 
