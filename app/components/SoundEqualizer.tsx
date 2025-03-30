@@ -56,9 +56,6 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
 
   const [activeSounds, setActiveSounds] = useState<Set<SoundType>>(new Set());
 
-  const [showDebug, setShowDebug] = useState(false);
-  const [lastChange, setLastChange] = useState<{ type: string; value: number; timestamp: number } | null>(null);
-
   // Load audio assets on mount
   useEffect(() => {
     console.log('Loading audio assets...');
@@ -97,13 +94,6 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       ...prev,
       [sound]: value
     }));
-
-    // Update last change for debug display
-    setLastChange({
-      type: sound,
-      value: value,
-      timestamp: Date.now()
-    });
 
     // Handle audio playback
     if (hasAudioAsset(sound)) {
@@ -178,58 +168,13 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       }
     }
 
-    // Update last change for debug display
-    setLastChange({
-      type: sound,
-      value: sounds[sound],
-      timestamp: Date.now()
-    });
-
     // Update forest match with current sound values
     onSoundChange(sounds);
-  };
-
-  const toggleDebug = () => {
-    console.log(`Debug mode ${showDebug ? 'disabled' : 'enabled'}`);
-    setShowDebug(!showDebug);
   };
 
   return (
     <div className="w-full py-6">
       <div className="max-w-6xl mx-auto px-4">
-        {/* Debug Button */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={toggleDebug}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800/50 hover:bg-gray-800/70 text-gray-300 text-sm transition-colors"
-          >
-            <TbBugOff className="w-4 h-4" />
-            {showDebug ? 'Hide Debug' : 'Show Debug'}
-          </button>
-        </div>
-
-        {/* Debug Display */}
-        {showDebug && (
-          <div className="mb-4 p-4 bg-gray-800/30 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-300 mb-2">Slider Values:</h3>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-              {Object.entries(sounds).map(([sound, value]) => (
-                <div key={sound} className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">{sound}:</span>
-                  <span className={`text-gray-200 ${lastChange?.type === sound ? 'text-blue-400' : ''}`}>
-                    {value.toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {lastChange && (
-              <div className="mt-2 text-xs text-gray-400">
-                Last change: {lastChange.type} = {lastChange.value.toFixed(2)} ({new Date(lastChange.timestamp).toLocaleTimeString()})
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Slider Grid */}
         <div className="grid grid-cols-5 md:grid-cols-10 gap-4">
           {Object.entries(sounds).map(([sound, value]) => {
