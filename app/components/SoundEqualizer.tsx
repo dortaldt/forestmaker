@@ -56,6 +56,9 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
 
   const [activeSounds, setActiveSounds] = useState<Set<SoundType>>(new Set());
 
+  const [showDebug, setShowDebug] = useState(false);
+  const [lastChange, setLastChange] = useState<{ type: string; value: number; timestamp: number } | null>(null);
+
   // Load audio assets on mount
   useEffect(() => {
     console.log('Loading audio assets...');
@@ -94,6 +97,13 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       ...prev,
       [sound]: value
     }));
+
+    // Update last change for debug display
+    setLastChange({
+      type: sound,
+      value: value,
+      timestamp: Date.now()
+    });
 
     // Handle audio playback
     if (hasAudioAsset(sound)) {
@@ -168,12 +178,55 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       }
     }
 
+    // Update last change for debug display
+    setLastChange({
+      type: sound,
+      value: sounds[sound],
+      timestamp: Date.now()
+    });
+
     // Update forest match with current sound values
     onSoundChange(sounds);
   };
 
+  const toggleDebug = () => {
+    console.log(`Debug mode ${showDebug ? 'disabled' : 'enabled'}`);
+    setShowDebug(!showDebug);
+  };
+
   return (
-    <div className="w-full p-6">
+    <div className="w-full p-4">
+      {/* Debug Panel */}
+      {showDebug && (
+        <div className="mb-4 p-4 bg-black/30 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-300 mb-2">Active Sounds:</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            {Array.from(activeSounds).map(sound => (
+              <div key={sound} className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">{sound}:</span>
+                <span className="text-gray-200">{sounds[sound].toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+          <h3 className="text-sm font-medium text-gray-300 mb-2 mt-4">Slider Values:</h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            {Object.entries(sounds).map(([sound, value]) => (
+              <div key={sound} className="flex items-center justify-between text-sm">
+                <span className="text-gray-400">{sound}:</span>
+                <span className={`text-gray-200 ${lastChange?.type === sound ? 'text-blue-400' : ''}`}>
+                  {value.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+          {lastChange && (
+            <div className="mt-4 text-sm text-gray-400">
+              Last change: {lastChange.type} = {lastChange.value.toFixed(2)} ({new Date(lastChange.timestamp).toLocaleTimeString()})
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Slider Grid */}
       <div className="grid grid-cols-5 md:grid-cols-10 gap-4">
         {Object.entries(sounds).map(([sound, value]) => {
@@ -188,16 +241,10 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                 
                 {/* Active sound indicator */}
                 {isActive && (
-                  <div 
-                    className="absolute h-full w-2 bg-blue-500/50 rounded-full"
-                    style={{
-                      height: `${value * 100}%`,
-                      bottom: 0
-                    }}
-                  />
+                  <div className="absolute h-full w-2 bg-blue-500/30 rounded-full" />
                 )}
                 
-                {/* Slider handle */}
+                {/* Slider thumb */}
                 <input
                   type="range"
                   min="0"
@@ -207,13 +254,14 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                   onChange={(e) => handleSliderChange(sound as SoundType, parseFloat(e.target.value))}
                   className="absolute h-full w-2 appearance-none bg-transparent cursor-pointer"
                   style={{
-                    background: `linear-gradient(to top, ${
-                      isActive ? '#3B82F6' : '#9CA3AF'
-                    } ${value * 100}%, transparent ${value * 100}%)`
+                    background: `linear-gradient(to top, 
+                      ${isActive ? '#3B82F6' : '#9CA3AF'} ${value * 100}%, 
+                      transparent ${value * 100}%
+                    )`
                   }}
                 />
               </div>
-
+              
               <div className="flex flex-col items-center gap-1">
                 <button
                   onClick={() => handleIconClick(sound as SoundType)}
@@ -226,7 +274,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                 >
                   <Icon className="w-6 h-6" />
                 </button>
-                <span className={`text-sm font-medium ${
+                <span className={`text-xs font-medium ${
                   isActive 
                     ? 'text-blue-400'
                     : 'text-gray-400'
