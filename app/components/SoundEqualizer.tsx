@@ -58,17 +58,24 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
 
   // Load audio assets on mount
   useEffect(() => {
-    console.log('Loading audio assets...');
-    Object.values(audioAssets).forEach(category => {
-      Object.values(category).forEach(asset => {
-        audioManager.loadSound(asset.id, asset.url);
-      });
-    });
-
-    return () => {
-      console.log('Cleaning up audio...');
-      audioManager.stopAllSounds();
+    const loadAudioAssets = async () => {
+      try {
+        await audioManager.initialize();
+        // Load all audio assets from all categories
+        for (const category of Object.values(audioAssets)) {
+          for (const asset of Object.values(category)) {
+            await audioManager.loadSound({
+              id: asset.id,
+              url: asset.url
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load audio assets:', error);
+      }
     };
+
+    loadAudioAssets();
   }, []);
 
   // Update active sounds whenever a sound is toggled or its value changes
@@ -87,9 +94,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
     onSoundChange(sounds);
   }, [sounds, onSoundChange]);
 
-  const handleSliderChange = (sound: SoundType, value: number) => {
-    console.log(`Slider change: ${sound} = ${value}`);
-    
+  const handleSliderChange = async (sound: SoundType, value: number) => {
     setSounds(prev => ({
       ...prev,
       [sound]: value
@@ -97,42 +102,36 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
 
     // Handle audio playback
     if (hasAudioAsset(sound)) {
-      // First, stop all current sounds of this type
-      Object.values(audioAssets[sound]).forEach(asset => {
-        audioManager.stopSound(asset.id);
-      });
-
-      if (value > 0) {
-        // Activate sound if not already active
-        if (!activeSounds.has(sound)) {
-          setActiveSounds(prev => new Set([...prev, sound]));
-        }
-
-        // Determine intensity based on value
-        let intensity: 'soft' | 'moderate' | 'strong';
-        if (value <= 0.33) {
-          intensity = 'soft';
-        } else if (value <= 0.66) {
-          intensity = 'moderate';
-        } else {
-          intensity = 'strong';
-        }
-
-        // Normalize volume to be between 0.3 and 1.0
-        const normalizedVolume = 0.3 + (value * 0.7);
-
-        const asset = audioAssets[sound]?.find(a => a.intensity === intensity);
-        if (asset) {
-          console.log(`Playing sound: ${asset.id} with intensity ${intensity}`);
-          audioManager.playSound(asset.id, normalizedVolume);
-        }
-      } else {
-        console.log(`Stopping sound: ${sound}`);
-        setActiveSounds(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(sound);
-          return newSet;
+      try {
+        // Stop all current sounds of this type
+        Object.values(audioAssets[sound]).forEach(asset => {
+          audioManager.stopSound(asset.id);
         });
+
+        if (value > 0) {
+          // Determine intensity based on value
+          let intensity: 'soft' | 'moderate' | 'strong';
+          if (value <= 0.33) {
+            intensity = 'soft';
+          } else if (value <= 0.66) {
+            intensity = 'moderate';
+          } else {
+            intensity = 'strong';
+          }
+
+          // Normalize volume to be between 0.3 and 1.0
+          const normalizedVolume = 0.3 + (value * 0.7);
+
+          const asset = audioAssets[sound]?.find(a => a.intensity === intensity);
+          if (asset) {
+            await audioManager.playSound({
+              id: asset.id,
+              url: asset.url
+            }, normalizedVolume);
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to handle audio for ${sound}:`, error);
       }
     }
 
@@ -140,31 +139,32 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
     onSoundChange(sounds);
   };
 
-  const handleIconClick = (sound: SoundType) => {
-    console.log(`Icon clicked: ${sound}`);
-    const isCurrentlyActive = activeSounds.has(sound as SoundType);
-    
-    // Toggle active state with new logic
+  const handleIconClick = async (sound: SoundType) => {
+    const newValue = sounds[sound] === 0 ? 0.1 : 0;
     setSounds(prev => ({
       ...prev,
-      [sound]: prev[sound] > 0 ? 0 : 0.1 // Toggle between 0 and 0.1
+      [sound]: newValue
     }));
 
-    // Handle audio if available
     if (hasAudioAsset(sound)) {
-      if (!isCurrentlyActive) {
-        // Play sound at soft intensity when toggling on
-        const asset = audioAssets[sound]?.find(a => a.intensity === 'soft');
-        if (asset) {
-          console.log(`Playing sound: ${asset.id} with intensity soft`);
-          audioManager.playSound(asset.id, 0.3); // Start at minimum volume
-        }
-      } else {
-        console.log(`Stopping sound: ${sound}`);
-        // Stop all sounds of this type
+      try {
+        // Stop all current sounds of this type
         Object.values(audioAssets[sound]).forEach(asset => {
           audioManager.stopSound(asset.id);
         });
+
+        if (newValue > 0) {
+          // Start with soft intensity when toggling on
+          const asset = audioAssets[sound]?.find(a => a.intensity === 'soft');
+          if (asset) {
+            await audioManager.playSound({
+              id: asset.id,
+              url: asset.url
+            }, 0.3); // Start at minimum volume
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to handle audio for ${sound}:`, error);
       }
     }
 
@@ -173,7 +173,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   };
 
   return (
-    <div className="w-full py-6">
+    <div className="w-full py-6 mb-32 md:mb-8">
       <div className="max-w-6xl mx-auto px-4">
         {/* Slider Grid */}
         <div className="grid grid-cols-5 md:grid-cols-10 gap-4">
@@ -183,7 +183,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
             const hasAudio = hasAudioAsset(sound);
             return (
               <div key={sound} className="flex flex-col items-center gap-2">
-                <div className="relative h-48 w-12 flex items-center justify-center">
+                <div className="relative h-32 md:h-36 w-12 flex items-center justify-center">
                   {/* Slider track background */}
                   <div className="absolute inset-0 w-2 mx-auto rounded-full bg-gray-700/30" />
                   
@@ -218,7 +218,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                 <div className="flex flex-col items-center gap-1">
                   <button
                     onClick={() => handleIconClick(sound as SoundType)}
-                    className={`p-2 rounded-full transition-all transform hover:scale-110 ${
+                    className={`p-1.5 md:p-2 rounded-full transition-all transform hover:scale-110 ${
                       isActive 
                         ? hasAudio
                           ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
@@ -227,9 +227,9 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                     }`}
                     aria-label={`Toggle ${soundLabels[sound as keyof typeof soundLabels]}`}
                   >
-                    <Icon className="w-6 h-6" />
+                    <Icon className="w-5 h-5 md:w-6 md:h-6" />
                   </button>
-                  <span className={`text-xs font-medium ${
+                  <span className={`text-[10px] md:text-xs font-medium ${
                     isActive 
                       ? hasAudio 
                         ? 'text-white/80' 

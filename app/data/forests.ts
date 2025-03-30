@@ -267,41 +267,41 @@ export const forests: Forest[] = [
     }
   },
   {
-    id: 'hou',
-    name: 'Hou Forest',
-    location: 'China',
-    vibe: 'Ancient, peaceful, and mystical',
-    imageUrl: '/assets/images/Hou.png',
+    id: 'bialowieza',
+    name: 'Białowieża',
+    location: 'Poland/Belarus',
+    vibe: 'ancient, mystical, primeval, dense, wild',
+    imageUrl: '/assets/images/bialowieza.jpg',
     soundProfile: {
-      wind: 0.4,    // Light winds
-      rain: 0.5,    // Moderate rainfall
-      birds: 0.5,   // Moderate birds
-      thunder: 0.3, // Occasional storms
-      water: 0.4,   // Some streams
-      insects: 0.4, // Moderate insects
-      mammals: 0.3, // Few mammals
-      fire: 0.1,    // Rare fires
-      ambient: 0.6, // Peaceful ambient sounds
-      spiritual: 0.7 // Strong spiritual presence
+      wind: 0.6,
+      rain: 0.7,
+      birds: 0.8,
+      thunder: 0.3,
+      water: 0.4,
+      insects: 0.7,
+      mammals: 0.6,
+      fire: 0.1,
+      ambient: 0.5,
+      spiritual: 0.4
     }
   },
   {
-    id: 'bialowieza',
-    name: 'Białowieża Forest',
-    location: 'Poland/Belarus',
-    vibe: 'Ancient, wild, and pristine',
-    imageUrl: '/assets/images/bialowieza.jpg',
+    id: 'hoh',
+    name: 'Hoh Forest',
+    location: 'Washington, USA',
+    vibe: 'temperate, misty, mossy, ancient, peaceful',
+    imageUrl: '/assets/images/Hoh2.png',
     soundProfile: {
-      wind: 0.5,    // Moderate winds
-      rain: 0.4,    // Light rainfall
-      birds: 0.6,   // Many birds
-      thunder: 0.3, // Occasional storms
-      water: 0.3,   // Some streams
-      insects: 0.5, // Many insects
-      mammals: 0.7, // Many mammals
-      fire: 0.2,    // Rare fires
-      ambient: 0.6, // Rich ambient sounds
-      spiritual: 0.5 // Moderate spiritual presence
+      wind: 0.5,
+      rain: 0.8,
+      birds: 0.6,
+      thunder: 0.2,
+      water: 0.7,
+      insects: 0.5,
+      mammals: 0.4,
+      fire: 0.1,
+      ambient: 0.6,
+      spiritual: 0.3
     }
   },
   {

@@ -22,7 +22,16 @@ export default function ForestMatch({ forest }: ForestMatchProps) {
     <div className="text-center">
       <h2 className="text-2xl font-bold mb-2 text-white/90">{forest.name}</h2>
       <p className="text-lg text-white/70 mb-4">{forest.location}</p>
-      <p className="text-md text-white/60">{forest.vibe}</p>
+      <div className="flex flex-wrap justify-center gap-2 mt-2">
+        {forest.vibe.split(',').map((word, index) => (
+          <span
+            key={index}
+            className="px-3 py-1 rounded-full text-xs md:text-sm font-medium bg-gradient-to-r from-stone-500/10 to-zinc-500/10 text-stone-200 border border-stone-500/20 shadow-lg shadow-stone-500/5 backdrop-blur-sm"
+          >
+            {word.trim()}
+          </span>
+        ))}
+      </div>
     </div>
   );
 } 
