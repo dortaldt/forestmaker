@@ -40,9 +40,30 @@ export class AudioManager {
         await this.audioContext.resume();
       }
 
+      // If context is running, we're good
+      if (this.audioContext.state === 'running') {
+        this.initialized = true;
+        return;
+      }
+
+      // If context is closed, create a new one
+      if (this.audioContext.state === 'closed') {
+        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      // Try to resume the context
+      await this.audioContext.resume();
       this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize audio context:', error);
+      // Try to recover by creating a new context
+      try {
+        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        await this.audioContext.resume();
+        this.initialized = true;
+      } catch (retryError) {
+        console.error('Failed to recover audio context:', retryError);
+      }
     }
   }
 

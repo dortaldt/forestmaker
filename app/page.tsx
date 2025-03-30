@@ -4,12 +4,37 @@ import { useState, useEffect } from 'react';
 import SoundEqualizer from './components/SoundEqualizer';
 import ForestMatch from './components/ForestMatch';
 import { findMatchingForest, SoundProfile, SoundType } from './utils/forestMatcher';
-import { Forest } from './data/forests';
+import { Forest, forests } from './data/forests';
+import Image from 'next/image';
 
 export default function Home() {
   const [currentForest, setCurrentForest] = useState<Forest | null>(null);
   const [activeSounds, setActiveSounds] = useState<Set<SoundType>>(new Set());
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+
+  // Preload forest images
+  useEffect(() => {
+    const preloadImages = async () => {
+      const imagePromises = forests.map((forest: Forest) => {
+        return new Promise((resolve, reject) => {
+          const img = new window.Image();
+          img.src = forest.imageUrl;
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+      });
+
+      try {
+        await Promise.all(imagePromises);
+        setImagesLoaded(true);
+      } catch (error) {
+        console.error('Failed to preload images:', error);
+      }
+    };
+
+    preloadImages();
+  }, []);
 
   const handleSoundChange = (sounds: SoundProfile) => {
     // Set hasInteracted to true on first interaction
@@ -36,38 +61,43 @@ export default function Home() {
   };
 
   return (
-    <main className="relative min-h-screen w-full overflow-hidden">
-      {/* Background Image with overlay */}
-      <div className="fixed inset-0">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-500"
-          style={{
-            backgroundImage: hasInteracted && currentForest
-              ? `url(${currentForest.imageUrl})`
-              : 'url(/assets/images/forest1.png)',
-          }}
-        />
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <main className="flex-1 relative h-screen overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0 transition-opacity duration-1000">
+        {activeSounds.size === 0 ? (
+          <Image
+            src="/assets/images/forest1.png"
+            alt="Forest Maker"
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
+            quality={90}
+          />
+        ) : currentForest ? (
+          <Image
+            src={currentForest.imageUrl}
+            alt={currentForest.name}
+            fill
+            priority
+            className="object-cover"
+            sizes="100vw"
+            quality={90}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-gray-800" />
+        )}
       </div>
-      
+
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
-        {/* Forest Info */}
-        <div className="flex-1 w-full max-w-4xl mx-auto p-8">
-          {!hasInteracted ? (
-            <div className="text-center">
-              <h1 className="text-4xl font-bold mb-4 text-white/90">Welcome to Forest Maker</h1>
-              <p className="text-xl text-white/70">
-                Adjust the sliders below to create your perfect forest atmosphere
-              </p>
-            </div>
-          ) : (
-            <ForestMatch forest={currentForest} />
-          )}
+      <div className="relative z-10 h-screen flex flex-col">
+        {/* Forest Match */}
+        <div className="flex-1 flex items-center justify-center p-4 min-h-[30vh]">
+          <ForestMatch forest={currentForest} />
         </div>
 
-        {/* Equalizer */}
-        <div className="w-full bg-black/30 backdrop-blur-md">
+        {/* Sound Equalizer */}
+        <div className="w-full -mt-[10vh] md:mt-0">
           <SoundEqualizer onSoundChange={handleSoundChange} />
         </div>
       </div>

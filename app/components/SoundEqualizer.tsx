@@ -60,16 +60,22 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   useEffect(() => {
     const loadAudioAssets = async () => {
       try {
+        // Initialize audio context first
         await audioManager.initialize();
-        // Load all audio assets from all categories
-        for (const category of Object.values(audioAssets)) {
-          for (const asset of Object.values(category)) {
-            await audioManager.loadSound({
-              id: asset.id,
-              url: asset.url
-            });
-          }
-        }
+        
+        // Preload all audio assets
+        const loadPromises = Object.entries(audioAssets).map(([category, assets]) => {
+          return Promise.all(
+            Object.values(assets).map(asset => 
+              audioManager.loadSound({
+                id: asset.id,
+                url: asset.url
+              })
+            )
+          );
+        });
+
+        await Promise.all(loadPromises);
       } catch (error) {
         console.error('Failed to load audio assets:', error);
       }
@@ -95,10 +101,11 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   }, [sounds, onSoundChange]);
 
   const handleSliderChange = async (sound: SoundType, value: number) => {
-    setSounds(prev => ({
-      ...prev,
+    const newSounds = {
+      ...sounds,
       [sound]: value
-    }));
+    };
+    setSounds(newSounds);
 
     // Handle audio playback
     if (hasAudioAsset(sound)) {
@@ -135,16 +142,17 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       }
     }
 
-    // Update forest match with current sound values
-    onSoundChange(sounds);
+    // Update forest match with current sound values immediately
+    onSoundChange(newSounds);
   };
 
   const handleIconClick = async (sound: SoundType) => {
     const newValue = sounds[sound] === 0 ? 0.1 : 0;
-    setSounds(prev => ({
-      ...prev,
+    const newSounds = {
+      ...sounds,
       [sound]: newValue
-    }));
+    };
+    setSounds(newSounds);
 
     if (hasAudioAsset(sound)) {
       try {
@@ -168,8 +176,8 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       }
     }
 
-    // Update forest match with current sound values
-    onSoundChange(sounds);
+    // Update forest match with current sound values immediately
+    onSoundChange(newSounds);
   };
 
   return (
@@ -214,8 +222,8 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                   />
                 </div>
                 
-                {/* Icon and label */}
-                <div className="flex flex-col items-center gap-1">
+                {/* Icon and label with blurred background */}
+                <div className="flex flex-col items-center gap-1 bg-black/30 backdrop-blur-md rounded-lg px-3 py-2">
                   <button
                     onClick={() => handleIconClick(sound as SoundType)}
                     className={`p-1.5 md:p-2 rounded-full transition-all transform hover:scale-110 ${
@@ -232,9 +240,9 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                   <span className={`text-[10px] md:text-xs font-medium ${
                     isActive 
                       ? hasAudio 
-                        ? 'text-white/80' 
-                        : 'text-purple-200/80'
-                      : 'text-gray-400'
+                        ? 'text-white' 
+                        : 'text-white'
+                      : 'text-white/60'
                   }`}>
                     {soundLabels[sound as keyof typeof soundLabels]}
                   </span>
