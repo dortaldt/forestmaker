@@ -56,6 +56,21 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
 
   const [activeSounds, setActiveSounds] = useState<Set<SoundType>>(new Set());
 
+  // Load audio assets on mount
+  useEffect(() => {
+    console.log('Loading audio assets...');
+    Object.values(audioAssets).forEach(category => {
+      Object.values(category).forEach(asset => {
+        audioManager.loadSound(asset.id, asset.url);
+      });
+    });
+
+    return () => {
+      console.log('Cleaning up audio...');
+      audioManager.stopAllSounds();
+    };
+  }, []);
+
   // Update active sounds whenever a sound is toggled or its value changes
   useEffect(() => {
     const newActiveSounds = new Set<SoundType>();
@@ -158,8 +173,8 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   };
 
   return (
-    <div className="w-full p-4">
-      {/* Sound Icons and Labels */}
+    <div className="w-full p-6">
+      {/* Slider Grid */}
       <div className="grid grid-cols-5 md:grid-cols-10 gap-4">
         {Object.entries(sounds).map(([sound, value]) => {
           const Icon = soundIcons[sound as keyof typeof soundIcons];
@@ -182,7 +197,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                   />
                 )}
                 
-                {/* Slider thumb */}
+                {/* Slider handle */}
                 <input
                   type="range"
                   min="0"
@@ -192,10 +207,9 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                   onChange={(e) => handleSliderChange(sound as SoundType, parseFloat(e.target.value))}
                   className="absolute h-full w-2 appearance-none bg-transparent cursor-pointer"
                   style={{
-                    WebkitAppearance: 'none',
-                    background: 'transparent',
-                    outline: 'none',
-                    pointerEvents: 'auto'
+                    background: `linear-gradient(to top, ${
+                      isActive ? '#3B82F6' : '#9CA3AF'
+                    } ${value * 100}%, transparent ${value * 100}%)`
                   }}
                 />
               </div>
@@ -205,9 +219,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                   onClick={() => handleIconClick(sound as SoundType)}
                   className={`p-2 rounded-full transition-all transform hover:scale-110 ${
                     isActive 
-                      ? hasAudio
-                        ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                        : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                      ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
                       : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
                   }`}
                   aria-label={`Toggle ${soundLabels[sound as keyof typeof soundLabels]}`}
@@ -215,10 +227,8 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                   <Icon className="w-6 h-6" />
                 </button>
                 <span className={`text-sm font-medium ${
-                  isActive
-                    ? hasAudio
-                      ? 'text-blue-400'
-                      : 'text-purple-400'
+                  isActive 
+                    ? 'text-blue-400'
                     : 'text-gray-400'
                 }`}>
                   {soundLabels[sound as keyof typeof soundLabels]}
