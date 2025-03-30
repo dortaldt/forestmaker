@@ -195,96 +195,109 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   };
 
   return (
-    <div className="w-full p-4">
-      {/* Debug Panel */}
-      {showDebug && (
-        <div className="mb-4 p-4 bg-black/30 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-300 mb-2">Active Sounds:</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {Array.from(activeSounds).map(sound => (
-              <div key={sound} className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">{sound}:</span>
-                <span className="text-gray-200">{sounds[sound].toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-          <h3 className="text-sm font-medium text-gray-300 mb-2 mt-4">Slider Values:</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {Object.entries(sounds).map(([sound, value]) => (
-              <div key={sound} className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">{sound}:</span>
-                <span className={`text-gray-200 ${lastChange?.type === sound ? 'text-blue-400' : ''}`}>
-                  {value.toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </div>
-          {lastChange && (
-            <div className="mt-4 text-sm text-gray-400">
-              Last change: {lastChange.type} = {lastChange.value.toFixed(2)} ({new Date(lastChange.timestamp).toLocaleTimeString()})
-            </div>
-          )}
+    <div className="w-full py-6">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Debug Button */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleDebug}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-800/50 hover:bg-gray-800/70 text-gray-300 text-sm transition-colors"
+          >
+            <TbBugOff className="w-4 h-4" />
+            {showDebug ? 'Hide Debug' : 'Show Debug'}
+          </button>
         </div>
-      )}
 
-      {/* Slider Grid */}
-      <div className="grid grid-cols-5 md:grid-cols-10 gap-4">
-        {Object.entries(sounds).map(([sound, value]) => {
-          const Icon = soundIcons[sound as keyof typeof soundIcons];
-          const isActive = activeSounds.has(sound as SoundType);
-          const hasAudio = hasAudioAsset(sound);
-          return (
-            <div key={sound} className="flex flex-col items-center gap-2">
-              <div className="relative h-48 w-12 flex items-center justify-center">
-                {/* Slider track background */}
-                <div className="absolute h-full w-2 bg-gray-700/50 rounded-full" />
-                
-                {/* Active sound indicator */}
-                {isActive && (
-                  <div className="absolute h-full w-2 bg-blue-500/30 rounded-full" />
-                )}
-                
-                {/* Slider thumb */}
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={value}
-                  onChange={(e) => handleSliderChange(sound as SoundType, parseFloat(e.target.value))}
-                  className="absolute h-full w-2 appearance-none bg-transparent cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to top, 
-                      ${isActive ? '#3B82F6' : '#9CA3AF'} ${value * 100}%, 
-                      transparent ${value * 100}%
-                    )`
-                  }}
-                />
-              </div>
-              
-              <div className="flex flex-col items-center gap-1">
-                <button
-                  onClick={() => handleIconClick(sound as SoundType)}
-                  className={`p-2 rounded-full transition-all transform hover:scale-110 ${
-                    isActive 
-                      ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                      : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
-                  }`}
-                  aria-label={`Toggle ${soundLabels[sound as keyof typeof soundLabels]}`}
-                >
-                  <Icon className="w-6 h-6" />
-                </button>
-                <span className={`text-xs font-medium ${
-                  isActive 
-                    ? 'text-blue-400'
-                    : 'text-gray-400'
-                }`}>
-                  {soundLabels[sound as keyof typeof soundLabels]}
-                </span>
-              </div>
+        {/* Debug Display */}
+        {showDebug && (
+          <div className="mb-4 p-4 bg-gray-800/30 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-300 mb-2">Slider Values:</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+              {Object.entries(sounds).map(([sound, value]) => (
+                <div key={sound} className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">{sound}:</span>
+                  <span className={`text-gray-200 ${lastChange?.type === sound ? 'text-blue-400' : ''}`}>
+                    {value.toFixed(2)}
+                  </span>
+                </div>
+              ))}
             </div>
-          );
-        })}
+            {lastChange && (
+              <div className="mt-2 text-xs text-gray-400">
+                Last change: {lastChange.type} = {lastChange.value.toFixed(2)} ({new Date(lastChange.timestamp).toLocaleTimeString()})
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Slider Grid */}
+        <div className="grid grid-cols-5 md:grid-cols-10 gap-4">
+          {Object.entries(sounds).map(([sound, value]) => {
+            const Icon = soundIcons[sound as keyof typeof soundIcons];
+            const isActive = activeSounds.has(sound as SoundType);
+            const hasAudio = hasAudioAsset(sound);
+            return (
+              <div key={sound} className="flex flex-col items-center gap-2">
+                <div className="relative h-48 w-12 flex items-center justify-center">
+                  {/* Slider track background */}
+                  <div className="absolute inset-0 w-2 mx-auto rounded-full bg-gray-700/30" />
+                  
+                  {/* Active track */}
+                  <div 
+                    className={`absolute bottom-0 w-2 mx-auto rounded-full transition-all ${
+                      isActive 
+                        ? hasAudio 
+                          ? 'bg-blue-500/50' 
+                          : 'bg-purple-500/50'
+                        : 'bg-gray-500/30'
+                    }`}
+                    style={{ height: `${value * 100}%` }}
+                  />
+                  
+                  {/* Slider input */}
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={value}
+                    onChange={(e) => handleSliderChange(sound as SoundType, parseFloat(e.target.value))}
+                    className="absolute h-full w-2 appearance-none bg-transparent cursor-pointer"
+                    style={{
+                      WebkitAppearance: 'slider-vertical',
+                    }}
+                  />
+                </div>
+                
+                {/* Icon and label */}
+                <div className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={() => handleIconClick(sound as SoundType)}
+                    className={`p-2 rounded-full transition-all transform hover:scale-110 ${
+                      isActive 
+                        ? hasAudio
+                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                          : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                        : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
+                    }`}
+                    aria-label={`Toggle ${soundLabels[sound as keyof typeof soundLabels]}`}
+                  >
+                    <Icon className="w-6 h-6" />
+                  </button>
+                  <span className={`text-xs font-medium ${
+                    isActive 
+                      ? hasAudio 
+                        ? 'text-white/80' 
+                        : 'text-purple-200/80'
+                      : 'text-gray-400'
+                  }`}>
+                    {soundLabels[sound as keyof typeof soundLabels]}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
