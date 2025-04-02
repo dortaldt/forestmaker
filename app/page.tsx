@@ -7,6 +7,7 @@ import { findMatchingForest, SoundProfile, SoundType } from './utils/forestMatch
 import { Forest, forests } from './data/forests';
 import Image from 'next/image';
 import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray } from 'react-icons/tb';
+import { useDebounce } from './utils/useDebounce';
 
 const soundIcons = {
   wind: TbWind,
@@ -21,112 +22,117 @@ const soundIcons = {
   spiritual: TbPray
 } as const;
 
+interface Forest {
+  id: string;
+  name: string;
+  location: string;
+  description: string;
+  imageUrl: string;
+  backgroundImage: string;
+  vibe: string[];
+  soundProfile: SoundProfile;
+}
+
 export default function Home() {
   const [currentForest, setCurrentForest] = useState<Forest | null>(null);
   const [activeSounds, setActiveSounds] = useState<Set<SoundType>>(new Set());
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentBackground, setCurrentBackground] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const debouncedSoundChange = useDebounce(activeSounds, 300);
 
-  // Preload forest images
+  // Handle forest selection and background changes
   useEffect(() => {
-    const preloadImages = async () => {
-      const imagePromises = forests.map((forest: Forest) => {
-        return new Promise((resolve, reject) => {
-          const img = new window.Image();
-          img.src = forest.imageUrl;
-          img.onload = resolve;
-          img.onerror = reject;
-        });
+    if (!hasInteracted) return;
+
+    const handleForestChange = async () => {
+      if (debouncedSoundChange.size === 0) {
+        if (currentForest) {
+          setIsTransitioning(true);
+          await new Promise(resolve => setTimeout(resolve, 300)); // Wait for fade out
+          setCurrentForest(null);
+          setCurrentBackground(null);
+          setIsTransitioning(false);
+        }
+        return;
+      }
+
+      // Create a sound profile from the active sounds
+      const soundProfile: SoundProfile = {} as SoundProfile;
+      Object.keys(soundIcons).forEach((sound) => {
+        soundProfile[sound as SoundType] = debouncedSoundChange.has(sound as SoundType) ? 0.5 : 0;
       });
 
-      try {
-        await Promise.all(imagePromises);
-        setImagesLoaded(true);
-      } catch (error) {
-        console.error('Failed to preload images:', error);
+      const matchingForest = findMatchingForest(soundProfile, debouncedSoundChange);
+      
+      // Only update if the forest has changed
+      if (matchingForest?.id !== currentForest?.id) {
+        setIsTransitioning(true);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Wait for fade out
+        setCurrentForest(matchingForest);
+        setCurrentBackground(matchingForest?.backgroundImage || null);
+        setIsTransitioning(false);
       }
     };
 
-    preloadImages();
+    handleForestChange();
+  }, [debouncedSoundChange, hasInteracted]);
+
+  // Handle initial loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000); // Show loading state for 2 seconds
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleSoundChange = (activeSounds: SoundType[]) => {
-    console.log('Page Sound Change:', {
-      activeSounds,
-      hasInteracted,
-      currentForest
-    });
-
-    // Set hasInteracted to true on first interaction
     if (!hasInteracted) {
       setHasInteracted(true);
-      console.log('First interaction detected');
     }
-
-    // Update active sounds
     setActiveSounds(new Set(activeSounds));
-
-    // Create a sound profile from the active sounds
-    const soundProfile: SoundProfile = {} as SoundProfile;
-    Object.keys(soundIcons).forEach((sound) => {
-      // Use 0.5 for active sounds to match the initial value when toggling
-      soundProfile[sound as SoundType] = activeSounds.includes(sound as SoundType) ? 0.5 : 0;
-    });
-
-    console.log('Sound Profile:', soundProfile);
-
-    // Only find matching forest if there are active sounds
-    if (activeSounds.length > 0) {
-      const matchingForest = findMatchingForest(soundProfile, new Set(activeSounds));
-      console.log('Matching Forest:', matchingForest);
-      setCurrentForest(matchingForest);
-    } else {
-      console.log('No active sounds, clearing forest');
-      setCurrentForest(null);
-    }
   };
 
   return (
-    <main className="fixed inset-0 overflow-hidden">
+    <main className="relative min-h-screen bg-black">
       {/* Background Image */}
-      <div className="fixed inset-0 transition-opacity duration-1000">
-        {activeSounds.size === 0 ? (
-          <Image
-            src="/assets/images/forest1.png"
-            alt="Forest Maker"
-            fill
-            priority
-            className="object-cover"
-            sizes="100vw"
-            quality={90}
-          />
-        ) : currentForest ? (
-          <Image
-            src={currentForest.imageUrl}
-            alt={currentForest.name}
-            fill
-            priority
-            className="object-cover"
-            sizes="100vw"
-            quality={90}
-          />
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-black/50 z-10" />
+        {isLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+          </div>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 to-gray-800" />
+          <Image
+            src={currentBackground || '/assets/images/forest1.png'}
+            alt="Forest background"
+            fill
+            className={`object-cover transition-opacity duration-300 ${
+              isTransitioning ? 'opacity-0' : 'opacity-100'
+            }`}
+            priority
+            sizes="100vw"
+            quality={90}
+          />
         )}
       </div>
 
       {/* Content */}
-      <div className="relative h-full flex flex-col">
+      <div className="relative z-20">
         {/* Forest Match - Positioned at top */}
         <div className="flex-none pt-4 md:pt-8 px-4">
-          <ForestMatch forest={currentForest} />
+          <ForestMatch 
+            currentForest={currentForest} 
+            activeSounds={Array.from(activeSounds)}
+            hasInteracted={hasInteracted}
+          />
         </div>
 
         {/* Sound Equalizer - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0">
-          <div className="w-full py-6">
-            <SoundEqualizer onSoundChange={handleSoundChange} />
-          </div>
+        <div className="flex-none">
+          <SoundEqualizer onSoundChange={handleSoundChange} />
         </div>
       </div>
     </main>

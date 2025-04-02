@@ -145,9 +145,9 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
         // Load all audio assets
         Object.values(audioAssets).forEach(assets => {
           assets.forEach(asset => {
-            audioManager.loadSound({
-              id: asset.id,
-              url: asset.url
+              audioManager.loadSound({
+                id: asset.id,
+                url: asset.url
             });
           });
         });
@@ -268,73 +268,73 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
     <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 z-50">
       <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4">
         {Object.entries(sounds).map(([sound, state]) => {
-          const Icon = soundIcons[sound as keyof typeof soundIcons];
+            const Icon = soundIcons[sound as keyof typeof soundIcons];
           const isActive = state.isActive;
-          const hasAudio = hasAudioAsset(sound);
-          return (
-            <div key={sound} className="flex flex-col items-center gap-2">
+            const hasAudio = hasAudioAsset(sound);
+            return (
+              <div key={sound} className="flex flex-col items-center gap-2">
               {/* Slider container - hidden on mobile until interaction */}
               <div className={`relative h-32 md:h-36 w-12 flex items-center justify-center transition-all duration-300 ${
                 state.showSlider ? 'opacity-100' : 'opacity-0 md:opacity-100'
               }`}>
-                {/* Slider track background */}
-                <div className="absolute inset-0 w-2 mx-auto rounded-full bg-gray-700/30" />
+                  {/* Slider track background */}
+                  <div className="absolute inset-0 w-2 mx-auto rounded-full bg-gray-700/30" />
+                  
+                  {/* Active track */}
+                  <div 
+                    className={`absolute bottom-0 w-2 mx-auto rounded-full transition-all ${
+                      isActive 
+                        ? hasAudio 
+                          ? 'bg-blue-500/50' 
+                          : 'bg-purple-500/50'
+                        : 'bg-gray-500/30'
+                    }`}
+                  style={{ height: `${state.value * 100}%` }}
+                  />
+                  
+                {/* Slider input with increased touch area */}
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                  value={state.value}
+                    onChange={(e) => handleSliderChange(sound as SoundType, parseFloat(e.target.value))}
+                  className="absolute h-full w-8 md:w-2 appearance-none bg-transparent cursor-pointer touch-manipulation"
+                    style={{
+                      WebkitAppearance: 'slider-vertical',
+                    }}
+                  />
+                </div>
                 
-                {/* Active track */}
-                <div 
-                  className={`absolute bottom-0 w-2 mx-auto rounded-full transition-all ${
+                {/* Icon and label with blurred background */}
+              <div className="flex flex-col items-center gap-1 bg-black/10 backdrop-blur-md rounded-lg px-3 py-2">
+                  <button
+                    onClick={() => handleIconClick(sound as SoundType)}
+                  className={`p-2 md:p-2 rounded-full transition-all transform hover:scale-110 touch-manipulation ${
+                      isActive 
+                        ? hasAudio
+                          ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                          : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                        : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
+                    }`}
+                    aria-label={`Toggle ${soundLabels[sound as keyof typeof soundLabels]}`}
+                  >
+                  <Icon className="w-6 h-6 md:w-6 md:h-6" />
+                  </button>
+                  <span className={`text-[10px] md:text-xs font-medium ${
                     isActive 
                       ? hasAudio 
-                        ? 'bg-blue-500/50' 
-                        : 'bg-purple-500/50'
-                      : 'bg-gray-500/30'
-                  }`}
-                  style={{ height: `${state.value * 100}%` }}
-                />
-                
-                {/* Slider input with increased touch area */}
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={state.value}
-                  onChange={(e) => handleSliderChange(sound as SoundType, parseFloat(e.target.value))}
-                  className="absolute h-full w-8 md:w-2 appearance-none bg-transparent cursor-pointer touch-manipulation"
-                  style={{
-                    WebkitAppearance: 'slider-vertical',
-                  }}
-                />
+                        ? 'text-white' 
+                        : 'text-white'
+                      : 'text-white/60'
+                  }`}>
+                    {soundLabels[sound as keyof typeof soundLabels]}
+                  </span>
+                </div>
               </div>
-              
-              {/* Icon and label with blurred background */}
-              <div className="flex flex-col items-center gap-1 bg-black/10 backdrop-blur-md rounded-lg px-3 py-2">
-                <button
-                  onClick={() => handleIconClick(sound as SoundType)}
-                  className={`p-2 md:p-2 rounded-full transition-all transform hover:scale-110 touch-manipulation ${
-                    isActive 
-                      ? hasAudio
-                        ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
-                        : 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
-                      : 'bg-gray-500/20 text-gray-400 hover:bg-gray-500/30'
-                  }`}
-                  aria-label={`Toggle ${soundLabels[sound as keyof typeof soundLabels]}`}
-                >
-                  <Icon className="w-6 h-6 md:w-6 md:h-6" />
-                </button>
-                <span className={`text-[10px] md:text-xs font-medium ${
-                  isActive 
-                    ? hasAudio 
-                      ? 'text-white' 
-                      : 'text-white'
-                    : 'text-white/60'
-                }`}>
-                  {soundLabels[sound as keyof typeof soundLabels]}
-                </span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );
