@@ -61,9 +61,9 @@ export default function Home() {
   };
 
   return (
-    <main className="flex-1 relative h-screen overflow-hidden">
+    <main className="fixed inset-0 overflow-hidden">
       {/* Background Image */}
-      <div className="absolute inset-0 transition-opacity duration-1000">
+      <div className="fixed inset-0 transition-opacity duration-1000">
         {activeSounds.size === 0 ? (
           <Image
             src="/assets/images/forest1.png"
@@ -90,15 +90,17 @@ export default function Home() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 h-screen flex flex-col">
-        {/* Forest Match */}
-        <div className="flex-1 flex items-center justify-center p-4 min-h-[30vh]">
+      <div className="relative h-full flex flex-col">
+        {/* Forest Match - Positioned at top */}
+        <div className="flex-none pt-4 md:pt-8 px-4">
           <ForestMatch forest={currentForest} />
         </div>
 
-        {/* Sound Equalizer */}
-        <div className="w-full -mt-[10vh] md:mt-0">
-          <SoundEqualizer onSoundChange={handleSoundChange} />
+        {/* Sound Equalizer - Fixed at bottom */}
+        <div className="fixed bottom-0 left-0 right-0">
+          <div className="w-full py-6">
+            <SoundEqualizer onSoundChange={handleSoundChange} />
+          </div>
         </div>
       </div>
     </main>

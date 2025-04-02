@@ -181,7 +181,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   };
 
   return (
-    <div className="w-full py-6 mb-32 md:mb-8">
+    <div className="w-full">
       <div className="max-w-6xl mx-auto px-4">
         {/* Slider Grid */}
         <div className="grid grid-cols-5 md:grid-cols-10 gap-4">
@@ -207,7 +207,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                     style={{ height: `${value * 100}%` }}
                   />
                   
-                  {/* Slider input */}
+                  {/* Slider input with increased touch area */}
                   <input
                     type="range"
                     min="0"
@@ -215,7 +215,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                     step="0.01"
                     value={value}
                     onChange={(e) => handleSliderChange(sound as SoundType, parseFloat(e.target.value))}
-                    className="absolute h-full w-2 appearance-none bg-transparent cursor-pointer"
+                    className="absolute h-full w-8 md:w-2 appearance-none bg-transparent cursor-pointer touch-manipulation"
                     style={{
                       WebkitAppearance: 'slider-vertical',
                     }}
@@ -223,10 +223,10 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                 </div>
                 
                 {/* Icon and label with blurred background */}
-                <div className="flex flex-col items-center gap-1 bg-black/30 backdrop-blur-md rounded-lg px-3 py-2">
+                <div className="flex flex-col items-center gap-1 bg-black/10 backdrop-blur-md rounded-lg px-3 py-2">
                   <button
                     onClick={() => handleIconClick(sound as SoundType)}
-                    className={`p-1.5 md:p-2 rounded-full transition-all transform hover:scale-110 ${
+                    className={`p-2 md:p-2 rounded-full transition-all transform hover:scale-110 touch-manipulation ${
                       isActive 
                         ? hasAudio
                           ? 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
@@ -235,7 +235,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
                     }`}
                     aria-label={`Toggle ${soundLabels[sound as keyof typeof soundLabels]}`}
                   >
-                    <Icon className="w-5 h-5 md:w-6 md:h-6" />
+                    <Icon className="w-6 h-6 md:w-6 md:h-6" />
                   </button>
                   <span className={`text-[10px] md:text-xs font-medium ${
                     isActive 
