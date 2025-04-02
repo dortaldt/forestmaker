@@ -69,6 +69,7 @@ export default function Home() {
     // Create a sound profile from the active sounds
     const soundProfile: SoundProfile = {} as SoundProfile;
     Object.keys(soundIcons).forEach((sound) => {
+      // Use 0.5 for active sounds to match the initial value when toggling
       soundProfile[sound as SoundType] = activeSounds.includes(sound as SoundType) ? 0.5 : 0;
     });
 

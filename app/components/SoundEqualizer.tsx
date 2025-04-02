@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { audioAssets } from '../data/audioAssets';
 import { audioManager } from '../utils/audioManager';
 import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray } from 'react-icons/tb';
@@ -40,6 +40,7 @@ interface SoundState {
   value: number;
   isActive: boolean;
   showSlider?: boolean;
+  targetValue?: number;
 }
 
 type SoundProfile = {
@@ -50,13 +51,91 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   const [sounds, setSounds] = useState<SoundProfile>(() => {
     const initial: SoundProfile = {} as SoundProfile;
     Object.keys(soundIcons).forEach((sound) => {
-      initial[sound as SoundType] = { value: 0, isActive: false, showSlider: false };
+      initial[sound as SoundType] = { value: 0, isActive: false, showSlider: false, targetValue: 0 };
     });
     return initial;
   });
 
   const [activeSounds, setActiveSounds] = useState<SoundType[]>([]);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const updateTimeoutRef = useRef<NodeJS.Timeout>();
+  const animationFrameRef = useRef<number>();
+
+  // Smooth value updates
+  useEffect(() => {
+    const updateValues = () => {
+      let needsUpdate = false;
+      const newSounds = { ...sounds };
+
+      Object.entries(sounds).forEach(([sound, state]) => {
+        if (state.targetValue !== undefined && state.value !== state.targetValue) {
+          // Smooth transition to target value
+          const diff = state.targetValue - state.value;
+          const step = diff * 0.1; // Adjust this value to control smoothing speed
+          
+          if (Math.abs(diff) > 0.001) {
+            newSounds[sound as SoundType] = {
+              ...state,
+              value: state.value + step
+            };
+            needsUpdate = true;
+          } else {
+            newSounds[sound as SoundType] = {
+              ...state,
+              value: state.targetValue
+            };
+            needsUpdate = true;
+          }
+        }
+      });
+
+      if (needsUpdate) {
+        setSounds(newSounds);
+      }
+
+      animationFrameRef.current = requestAnimationFrame(updateValues);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(updateValues);
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [sounds]);
+
+  // Debounced forest update
+  useEffect(() => {
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+
+    updateTimeoutRef.current = setTimeout(() => {
+      // Create a map of active sounds with their current values
+      const activeSoundsWithValues = Object.entries(sounds)
+        .filter(([_, sound]) => sound.isActive && sound.value > 0)
+        .map(([name, sound]) => ({
+          name: name as SoundType,
+          value: sound.value
+        }));
+
+      // Sort by value to prioritize stronger sounds
+      activeSoundsWithValues.sort((a, b) => b.value - a.value);
+
+      // Take only the top 3 sounds to avoid overwhelming the forest matching
+      const topSounds = activeSoundsWithValues.slice(0, 3).map(s => s.name);
+      
+      if (JSON.stringify(topSounds) !== JSON.stringify(activeSounds)) {
+        console.log('Updating active sounds:', {
+          topSounds,
+          currentActiveSounds: activeSounds,
+          allSounds: sounds
+        });
+        setActiveSounds(topSounds);
+        onSoundChange(topSounds);
+      }
+    }, 100); // Adjust this value to control debounce delay
+  }, [sounds, activeSounds, onSoundChange]);
 
   // Load audio assets on mount
   useEffect(() => {
@@ -83,24 +162,6 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
     };
   }, []);
 
-  // Update active sounds whenever a sound is toggled or its value changes
-  useEffect(() => {
-    const newActiveSounds = Object.entries(sounds)
-      .filter(([_, sound]) => sound.isActive && sound.value > 0)
-      .map(([name]) => name as SoundType);
-    
-    console.log('Active Sounds Update:', {
-      newActiveSounds,
-      currentActiveSounds: activeSounds,
-      sounds
-    });
-
-    if (JSON.stringify(newActiveSounds) !== JSON.stringify(activeSounds)) {
-      setActiveSounds(newActiveSounds);
-      onSoundChange(newActiveSounds);
-    }
-  }, [sounds, activeSounds, onSoundChange]);
-
   const hasAudioAsset = (soundType: string): boolean => {
     return soundType in audioAssets;
   };
@@ -114,23 +175,21 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       hasAudio: hasAudioAsset(sound)
     });
 
-    setSounds(prev => {
-      const newState = {
-        ...prev,
-        [sound]: {
-          ...prev[sound],
-          value,
-          isActive: value > 0,
-          showSlider: true
-        }
-      };
-      console.log('New Sounds State:', newState);
-      return newState;
-    });
+    // Update the sound state
+    setSounds(prev => ({
+      ...prev,
+      [sound]: {
+        ...prev[sound],
+        targetValue: value,
+        isActive: value > 0,
+        showSlider: true
+      }
+    }));
 
-    // Handle audio playback
+    // Handle audio playback with smooth transitions
     if (hasAudioAsset(sound)) {
       try {
+        // Always stop current sounds first
         Object.values(audioAssets[sound]).forEach(asset => {
           audioManager.stopSound(asset.id);
         });
@@ -146,16 +205,10 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
           }
 
           const normalizedVolume = 0.3 + (value * 0.7);
-
-          console.log('Audio Playback:', {
-            sound,
-            value,
-            intensity,
-            normalizedVolume
-          });
-
           const asset = audioAssets[sound]?.find(a => a.intensity === intensity);
+          
           if (asset) {
+            // Smooth volume transition
             await audioManager.playSound({
               id: asset.id,
               url: asset.url
@@ -176,33 +229,27 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       hasAudio: hasAudioAsset(sound)
     });
 
-    setSounds(prev => {
-      const newState = {
-        ...prev,
-        [sound]: {
-          ...prev[sound],
-          isActive: !prev[sound].isActive,
-          value: prev[sound].isActive ? 0 : 0.5,
-          showSlider: true
-        }
-      };
-      console.log('New Sounds State:', newState);
-      return newState;
-    });
+    const newValue = sounds[sound].isActive ? 0 : 0.5;
+    
+    // Update the sound state
+    setSounds(prev => ({
+      ...prev,
+      [sound]: {
+        ...prev[sound],
+        targetValue: newValue,
+        isActive: !prev[sound].isActive,
+        showSlider: true
+      }
+    }));
 
     if (hasAudioAsset(sound)) {
       try {
+        // Always stop current sounds first
         Object.values(audioAssets[sound]).forEach(asset => {
           audioManager.stopSound(asset.id);
         });
 
         if (!sounds[sound].isActive) {
-          console.log('Audio Playback (Icon):', {
-            sound,
-            intensity: 'soft',
-            volume: 0.3
-          });
-
           const asset = audioAssets[sound]?.find(a => a.intensity === 'soft');
           if (asset) {
             await audioManager.playSound({
@@ -222,7 +269,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       <div className="grid grid-cols-5 md:grid-cols-10 gap-2 md:gap-4">
         {Object.entries(sounds).map(([sound, state]) => {
           const Icon = soundIcons[sound as keyof typeof soundIcons];
-          const isActive = activeSounds.includes(sound as SoundType);
+          const isActive = state.isActive;
           const hasAudio = hasAudioAsset(sound);
           return (
             <div key={sound} className="flex flex-col items-center gap-2">
