@@ -6,6 +6,20 @@ import ForestMatch from './components/ForestMatch';
 import { findMatchingForest, SoundProfile, SoundType } from './utils/forestMatcher';
 import { Forest, forests } from './data/forests';
 import Image from 'next/image';
+import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray } from 'react-icons/tb';
+
+const soundIcons = {
+  wind: TbWind,
+  rain: TbDroplet,
+  birds: TbFeather,
+  thunder: TbCloudStorm,
+  water: TbDropletFilled,
+  insects: TbBug,
+  mammals: TbDeer,
+  fire: TbFlame,
+  ambient: TbMoodSmile,
+  spiritual: TbPray
+} as const;
 
 export default function Home() {
   const [currentForest, setCurrentForest] = useState<Forest | null>(null);
@@ -36,24 +50,24 @@ export default function Home() {
     preloadImages();
   }, []);
 
-  const handleSoundChange = (sounds: SoundProfile) => {
+  const handleSoundChange = (activeSounds: SoundType[]) => {
     // Set hasInteracted to true on first interaction
     if (!hasInteracted) {
       setHasInteracted(true);
     }
 
-    // Update active sounds based on non-zero values
-    const newActiveSounds = new Set<SoundType>();
-    Object.entries(sounds).forEach(([sound, value]) => {
-      if (value > 0) {
-        newActiveSounds.add(sound as SoundType);
-      }
+    // Update active sounds
+    setActiveSounds(new Set(activeSounds));
+
+    // Create a sound profile from the active sounds
+    const soundProfile: SoundProfile = {} as SoundProfile;
+    Object.keys(soundIcons).forEach((sound) => {
+      soundProfile[sound as SoundType] = activeSounds.includes(sound as SoundType) ? 0.5 : 0;
     });
-    setActiveSounds(newActiveSounds);
 
     // Only find matching forest if there are active sounds
-    if (newActiveSounds.size > 0) {
-      const matchingForest = findMatchingForest(sounds, newActiveSounds);
+    if (activeSounds.length > 0) {
+      const matchingForest = findMatchingForest(soundProfile, new Set(activeSounds));
       setCurrentForest(matchingForest);
     } else {
       setCurrentForest(null);
