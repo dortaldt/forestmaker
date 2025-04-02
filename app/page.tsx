@@ -51,9 +51,16 @@ export default function Home() {
   }, []);
 
   const handleSoundChange = (activeSounds: SoundType[]) => {
+    console.log('Page Sound Change:', {
+      activeSounds,
+      hasInteracted,
+      currentForest
+    });
+
     // Set hasInteracted to true on first interaction
     if (!hasInteracted) {
       setHasInteracted(true);
+      console.log('First interaction detected');
     }
 
     // Update active sounds
@@ -65,11 +72,15 @@ export default function Home() {
       soundProfile[sound as SoundType] = activeSounds.includes(sound as SoundType) ? 0.5 : 0;
     });
 
+    console.log('Sound Profile:', soundProfile);
+
     // Only find matching forest if there are active sounds
     if (activeSounds.length > 0) {
       const matchingForest = findMatchingForest(soundProfile, new Set(activeSounds));
+      console.log('Matching Forest:', matchingForest);
       setCurrentForest(matchingForest);
     } else {
+      console.log('No active sounds, clearing forest');
       setCurrentForest(null);
     }
   };

@@ -39,6 +39,7 @@ const soundLabels: Record<SoundType, string> = {
 interface SoundState {
   value: number;
   isActive: boolean;
+  showSlider?: boolean;
 }
 
 type SoundProfile = {
@@ -46,16 +47,16 @@ type SoundProfile = {
 };
 
 export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
-  // Initialize sounds state with proper typing
   const [sounds, setSounds] = useState<SoundProfile>(() => {
     const initial: SoundProfile = {} as SoundProfile;
     Object.keys(soundIcons).forEach((sound) => {
-      initial[sound as SoundType] = { value: 0, isActive: false };
+      initial[sound as SoundType] = { value: 0, isActive: false, showSlider: false };
     });
     return initial;
   });
 
   const [activeSounds, setActiveSounds] = useState<SoundType[]>([]);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   // Load audio assets on mount
   useEffect(() => {
@@ -88,7 +89,12 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       .filter(([_, sound]) => sound.isActive && sound.value > 0)
       .map(([name]) => name as SoundType);
     
-    // Only update if the active sounds have actually changed
+    console.log('Active Sounds Update:', {
+      newActiveSounds,
+      currentActiveSounds: activeSounds,
+      sounds
+    });
+
     if (JSON.stringify(newActiveSounds) !== JSON.stringify(activeSounds)) {
       setActiveSounds(newActiveSounds);
       onSoundChange(newActiveSounds);
@@ -101,25 +107,35 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
 
   // Memoize the slider change handler
   const handleSliderChange = useCallback(async (sound: SoundType, value: number) => {
-    setSounds(prev => ({
-      ...prev,
-      [sound]: {
-        ...prev[sound],
-        value,
-        isActive: value > 0
-      }
-    }));
+    console.log('Slider Change:', {
+      sound,
+      value,
+      currentState: sounds[sound],
+      hasAudio: hasAudioAsset(sound)
+    });
+
+    setSounds(prev => {
+      const newState = {
+        ...prev,
+        [sound]: {
+          ...prev[sound],
+          value,
+          isActive: value > 0,
+          showSlider: true
+        }
+      };
+      console.log('New Sounds State:', newState);
+      return newState;
+    });
 
     // Handle audio playback
     if (hasAudioAsset(sound)) {
       try {
-        // Stop all current sounds of this type
         Object.values(audioAssets[sound]).forEach(asset => {
           audioManager.stopSound(asset.id);
         });
 
         if (value > 0) {
-          // Determine intensity based on value
           let intensity: 'soft' | 'moderate' | 'strong';
           if (value <= 0.33) {
             intensity = 'soft';
@@ -129,8 +145,14 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
             intensity = 'strong';
           }
 
-          // Normalize volume to be between 0.3 and 1.0
           const normalizedVolume = 0.3 + (value * 0.7);
+
+          console.log('Audio Playback:', {
+            sound,
+            value,
+            intensity,
+            normalizedVolume
+          });
 
           const asset = audioAssets[sound]?.find(a => a.intensity === intensity);
           if (asset) {
@@ -144,41 +166,56 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
         console.error(`Failed to handle audio for ${sound}:`, error);
       }
     }
-  }, []);
+  }, [sounds, hasAudioAsset]);
 
   // Memoize the icon click handler
   const handleIconClick = useCallback(async (sound: SoundType) => {
-    setSounds(prev => ({
-      ...prev,
-      [sound]: {
-        ...prev[sound],
-        isActive: !prev[sound].isActive,
-        value: prev[sound].isActive ? 0 : 0.5 // Reset to 0.5 when activating
-      }
-    }));
+    console.log('Icon Click:', {
+      sound,
+      currentState: sounds[sound],
+      hasAudio: hasAudioAsset(sound)
+    });
+
+    setSounds(prev => {
+      const newState = {
+        ...prev,
+        [sound]: {
+          ...prev[sound],
+          isActive: !prev[sound].isActive,
+          value: prev[sound].isActive ? 0 : 0.5,
+          showSlider: true
+        }
+      };
+      console.log('New Sounds State:', newState);
+      return newState;
+    });
 
     if (hasAudioAsset(sound)) {
       try {
-        // Stop all current sounds of this type
         Object.values(audioAssets[sound]).forEach(asset => {
           audioManager.stopSound(asset.id);
         });
 
         if (!sounds[sound].isActive) {
-          // Start with soft intensity when toggling on
+          console.log('Audio Playback (Icon):', {
+            sound,
+            intensity: 'soft',
+            volume: 0.3
+          });
+
           const asset = audioAssets[sound]?.find(a => a.intensity === 'soft');
           if (asset) {
             await audioManager.playSound({
               id: asset.id,
               url: asset.url
-            }, 0.3); // Start at minimum volume
+            }, 0.3);
           }
         }
       } catch (error) {
         console.error(`Failed to handle audio for ${sound}:`, error);
       }
     }
-  }, [sounds]);
+  }, [sounds, hasAudioAsset]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 p-4 md:p-6 z-50">
@@ -189,7 +226,10 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
           const hasAudio = hasAudioAsset(sound);
           return (
             <div key={sound} className="flex flex-col items-center gap-2">
-              <div className="relative h-32 md:h-36 w-12 flex items-center justify-center">
+              {/* Slider container - hidden on mobile until interaction */}
+              <div className={`relative h-32 md:h-36 w-12 flex items-center justify-center transition-all duration-300 ${
+                state.showSlider ? 'opacity-100' : 'opacity-0 md:opacity-100'
+              }`}>
                 {/* Slider track background */}
                 <div className="absolute inset-0 w-2 mx-auto rounded-full bg-gray-700/30" />
                 
