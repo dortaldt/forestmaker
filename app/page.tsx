@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import SoundEqualizer from './components/SoundEqualizer';
 import ForestMatch from './components/ForestMatch';
+import PiPMiniPlayer from './components/PiPMiniPlayer';
 import { findMatchingForest, SoundProfile, SoundType } from './utils/forestMatcher';
 import { Forest, forests } from './data/forests';
 import Image from 'next/image';
-import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray } from 'react-icons/tb';
+import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray, TbPictureInPicture, TbPictureInPictureOff } from 'react-icons/tb';
 
 const soundIcons = {
   wind: TbWind,
@@ -29,6 +30,7 @@ export default function Home() {
   const [previousImage, setPreviousImage] = useState<string>('/assets/images/forest1.png');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [nextImageLoaded, setNextImageLoaded] = useState(false);
+  const [isPiPVisible, setIsPiPVisible] = useState(false);
 
   // Preload forest images
   useEffect(() => {
@@ -122,6 +124,11 @@ export default function Home() {
     }
   };
 
+  // Toggle PiP visibility
+  const togglePiP = () => {
+    setIsPiPVisible(prev => !prev);
+  };
+
   return (
     <main className="fixed inset-0 overflow-hidden">
       {/* Background image with transition */}
@@ -173,6 +180,23 @@ export default function Home() {
             <SoundEqualizer onSoundChange={handleSoundChange} />
           </div>
         </div>
+
+        {/* PiP Toggle Button */}
+        <button
+          onClick={togglePiP}
+          className="fixed bottom-4 right-4 z-50 bg-gray-800 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg"
+          aria-label={isPiPVisible ? "Hide Picture-in-Picture" : "Show Picture-in-Picture"}
+          title={isPiPVisible ? "Hide Picture-in-Picture" : "Show Picture-in-Picture"}
+        >
+          {isPiPVisible ? <TbPictureInPictureOff size={20} /> : <TbPictureInPicture size={20} />}
+        </button>
+        
+        {/* PiP Mini Player */}
+        <PiPMiniPlayer 
+          forest={currentForest} 
+          activeSounds={activeSounds} 
+          isVisible={isPiPVisible} 
+        />
       </div>
     </main>
   );

@@ -16,6 +16,9 @@ export class AudioManager {
   private activeSources: Map<string, AudioBufferSourceNode> = new Map();
   private activeGains: Map<string, GainNode> = new Map();
   private initialized = false;
+  
+  // PiP connection function (will be set by PiPMiniPlayer)
+  public connectToPiP?: (sourceNode: AudioNode) => void;
 
   private constructor() {}
 
@@ -108,6 +111,12 @@ export class AudioManager {
 
       source.connect(gainNode);
       gainNode.connect(this.audioContext!.destination);
+      
+      // Connect to PiP if available
+      if (this.connectToPiP) {
+        gainNode.connect(this.audioContext!.destination); // Keep audio playing through main output
+        this.connectToPiP(gainNode); // Also send to PiP
+      }
 
       source.start(0);
       this.activeSources.set(asset.id, source);
@@ -148,6 +157,17 @@ export class AudioManager {
 
   stopAllSounds(): void {
     this.activeSources.forEach((_, assetId) => this.stopSound(assetId));
+  }
+
+  // Connect all active gain nodes to the PiP destination
+  connectAllToPiP(): void {
+    if (!this.connectToPiP) return;
+    
+    this.activeGains.forEach((gainNode) => {
+      if (this.connectToPiP) {
+        this.connectToPiP(gainNode);
+      }
+    });
   }
 
   cleanup(): void {
