@@ -60,12 +60,19 @@ export class AudioManager {
       // Reset the flag
       this.wasContextInterrupted = false;
       
+      // Check if we have PiP active before blindly reconnecting sounds
+      const hasPiPActive = !!this.connectToPiP;
+      
       // Force a recovery attempt regardless of current state
       this.recoverFromInterruption();
       
-      // Also manually reconnect all active sounds to ensure audio is flowing
-      console.log('[Audio Debug] Reconnecting all active sounds after foreground');
-      this.reconnectAllSounds();
+      // Only reconnect sounds if PiP is not active to avoid duplication
+      if (!hasPiPActive) {
+        console.log('[Audio Debug] Reconnecting all active sounds after foreground');
+        this.reconnectAllSounds();
+      } else {
+        console.log('[Audio Debug] PiP active - skipping sound reconnection to avoid duplication');
+      }
     }
   }
   
@@ -201,6 +208,27 @@ export class AudioManager {
   public reconnectAllSounds(): void {
     if (!this._audioContext) return;
     
+    // Check if PiP is active - we need special handling
+    const hasPiPActive = !!this.connectToPiP;
+    
+    // If PiP is active, be extra cautious about reconnection
+    if (hasPiPActive) {
+      console.log('[Audio Debug] PiP is active during reconnect - using cautious approach');
+      
+      // When PiP is active, only resume the context without restarting sounds
+      // This is because PiP should maintain its own audio stream
+      const state = this.getContextState();
+      if (state === 'suspended' || state === 'interrupted') {
+        console.log('[Audio Debug] Resuming audio context only due to PiP active');
+        this._audioContext!.resume().catch(err => {
+          console.error('[Audio Debug] Failed to resume context with PiP active:', err);
+        });
+      }
+      
+      return;
+    }
+    
+    // Traditional sound reconnection (only when PiP is NOT active)
     // Save current playing sounds - use Set to avoid duplicates
     const activeAssetIds = new Set<string>();
     const soundVolumes = new Map<string, number>();
@@ -371,9 +399,20 @@ export class AudioManager {
             console.error('[Audio Debug] Failed to resume audio context:', err);
           });
           
+          // Check if we have PiP active before attempting to recover
+          const hasPiPActive = !!this.connectToPiP;
+          
           // For iOS interruption, more aggressive recovery may be needed
           if (this.isIOS && state === 'interrupted') {
             this.recoverFromInterruption();
+            
+            // Only perform reconnect if PiP is not active
+            if (!hasPiPActive) {
+              console.log('[Audio Debug] Reconnecting sounds after iOS interruption');
+              this.reconnectAllSounds();
+            } else {
+              console.log('[Audio Debug] PiP active - skipping sound reconnection to avoid duplication');
+            }
           }
         }
       }
@@ -597,32 +636,51 @@ export class AudioManager {
 
   // Connect all active gain nodes to the PiP destination
   connectAllToPiP(): void {
-    if (!this.connectToPiP) {
-      console.log('[Audio Debug] Cannot connect to PiP - no connection method available');
+    if (!this.connectToPiP || !this._audioContext) {
+      console.log('[Audio Debug] Cannot connect to PiP - no connection method or context available');
       return;
     }
     
     console.log(`[Audio Debug] Connecting all active sources to PiP, count: ${this.activeGains.size}`);
     
-    // Create a main page gain control to silence main output without affecting PiP
-    const mainPageGain = this._audioContext?.createGain();
-    if (mainPageGain) {
+    try {
+      // Create a main page gain control to silence main output without affecting PiP
+      const mainPageGain = this._audioContext.createGain();
       mainPageGain.gain.value = 0; // Mute main page audio
       console.log('[Audio Debug] Created master page gain control (muted)');
       
       // Reconnect all audio nodes through our muted master gain
+      const nodesProcessed = [];
+      
       this.activeGains.forEach((gainNode, id) => {
         try {
-          // Disconnect from direct output to prevent duplicate audio
-          gainNode.disconnect(this._audioContext!.destination);
+          // Skip nodes that don't belong to this context
+          if (gainNode.context !== this._audioContext) {
+            console.log(`[Audio Debug] Skipping ${id} - belongs to different audio context`);
+            return;
+          }
           
-          // Connect to muted main page output
-          gainNode.connect(mainPageGain);
-          
-          // Connect to PiP destination
-          if (this.connectToPiP) {
-            console.log(`[Audio Debug] Connecting ${id} to PiP only`);
-            this.connectToPiP(gainNode);
+          // Check if node is already connected to the destination
+          try {
+            // First safely disconnect from destination if connected
+            try {
+              gainNode.disconnect(this._audioContext!.destination);
+            } catch (disconnectError) {
+              // Ignore errors about nodes not being connected
+              console.log(`[Audio Debug] Node ${id} was not connected to destination`);
+            }
+            
+            // Connect to muted main page output
+            gainNode.connect(mainPageGain);
+            
+            // Connect to PiP destination
+            if (this.connectToPiP) {
+              console.log(`[Audio Debug] Connecting ${id} to PiP`);
+              this.connectToPiP(gainNode);
+              nodesProcessed.push(id);
+            }
+          } catch (connectionError) {
+            console.error(`[Audio Debug] Error connecting ${id}:`, connectionError);
           }
         } catch (e) {
           console.error(`[Audio Debug] Error reconnecting ${id}:`, e);
@@ -630,18 +688,14 @@ export class AudioManager {
       });
       
       // Connect master gain to audio context destination
-      mainPageGain.connect(this._audioContext!.destination);
+      mainPageGain.connect(this._audioContext.destination);
       
       // Store this gain node for later restoration
       this._mainPageMasterGain = mainPageGain;
-    } else {
-      // Fallback to old method if we couldn't create a master gain
-      this.activeGains.forEach((gainNode, id) => {
-        if (this.connectToPiP) {
-          console.log(`[Audio Debug] Connecting ${id} to PiP (legacy method)`);
-          this.connectToPiP(gainNode);
-        }
-      });
+      
+      console.log(`[Audio Debug] Successfully connected ${nodesProcessed.length} nodes to PiP`);
+    } catch (error) {
+      console.error('[Audio Debug] Failed to set up PiP audio routing:', error);
     }
     
     // For iOS, make sure to attempt reconnections after PiP starts
@@ -650,17 +704,29 @@ export class AudioManager {
       // This helps ensure audio doesn't cut out during PiP transitions
       const scheduleRecovery = (delay: number) => {
         setTimeout(() => {
+          if (!this._audioContext || !this.connectToPiP) return;
+          
           console.log(`[Audio Debug] PiP stabilization check at ${delay}ms`);
-          if (this._audioContext && this.getContextState() !== 'running') {
+          if (this.getContextState() !== 'running') {
             console.log('[Audio Debug] Audio needs recovery during PiP');
             this.recoverFromInterruption();
           }
           
           // Also refresh connections regardless of state
-          if (this.activeSources.size > 0 && this.connectToPiP) {
+          if (this.activeSources.size > 0) {
             console.log('[Audio Debug] Refreshing PiP audio connections');
             this.activeGains.forEach((gainNode, id) => {
-              this.connectToPiP!(gainNode);
+              // Skip nodes that don't belong to this context
+              if (gainNode.context !== this._audioContext) {
+                console.log(`[Audio Debug] Skipping refresh for ${id} - different context`);
+                return;
+              }
+              
+              try {
+                this.connectToPiP!(gainNode);
+              } catch (error) {
+                console.error(`[Audio Debug] Error refreshing connection for ${id}:`, error);
+              }
             });
           }
         }, delay);
@@ -740,27 +806,14 @@ export class AudioManager {
     // Remove the connect method
     this.connectToPiP = undefined;
     
-    // Remove main page mute
-    if (this._mainPageMasterGain && this._audioContext) {
-      console.log('[Audio Debug] Removing main page mute');
-      
-      try {
-        // Disconnect the master gain node
-        this._mainPageMasterGain.disconnect();
-        this._mainPageMasterGain = null;
-      } catch (e) {
-        console.error('[Audio Debug] Error removing main page mute:', e);
-      }
-    }
-    
-    // Ensure there are no duplicate sounds
-    const uniqueSoundIds = new Set<string>();
+    // Track which sounds we need to restore
+    const activeSoundIds = new Set<string>();
     const soundVolumes = new Map<string, number>();
     
-    // Get all base sound IDs (without recovery markers)
+    // Get all currently active sounds
     this.activeSources.forEach((_, id) => {
       const baseId = id.includes('-recovery-') ? id.split('-recovery-')[0] : id;
-      uniqueSoundIds.add(baseId);
+      activeSoundIds.add(baseId);
       
       // Save the volume if we haven't seen this base ID yet
       if (!soundVolumes.has(baseId)) {
@@ -771,19 +824,64 @@ export class AudioManager {
       }
     });
     
-    console.log(`[Audio Debug] Found ${uniqueSoundIds.size} unique sounds to check for duplicates`);
-    
-    // Check each unique sound for duplicates
-    uniqueSoundIds.forEach(baseId => {
-      this.cleanupSound(baseId);
+    // Remove main page mute
+    if (this._mainPageMasterGain && this._audioContext) {
+      console.log('[Audio Debug] Removing main page mute and restoring direct audio output');
       
-      // Restart the sound if it was active
+      try {
+        // First, ensure audio context is running
+        if (this._audioContext.state !== 'running') {
+          console.log('[Audio Debug] Resuming audio context before restoring main page audio');
+          this._audioContext.resume().catch(err => {
+            console.error('[Audio Debug] Error resuming context during PiP exit:', err);
+          });
+        }
+        
+        // Disconnect the master gain node
+        this._mainPageMasterGain.disconnect();
+        this._mainPageMasterGain = null;
+        
+        // IMPORTANT: Reconnect all gain nodes directly to the destination to unmute
+        console.log('[Audio Debug] Reconnecting all audio nodes directly to main output');
+        this.activeGains.forEach((gainNode, id) => {
+          try {
+            // First disconnect from any other destinations (might be connected to PiP)
+            gainNode.disconnect();
+            
+            // Connect directly to context destination to restore normal audio
+            gainNode.connect(this._audioContext!.destination);
+            console.log(`[Audio Debug] Restored main page audio for: ${id}`);
+          } catch (error) {
+            console.error(`[Audio Debug] Error reconnecting node to main output: ${id}`, error);
+          }
+        });
+      } catch (e) {
+        console.error('[Audio Debug] Error removing main page mute:', e);
+      }
+    }
+    
+    // Ensure there are no duplicate sounds by stopping all and restarting the necessary ones
+    console.log(`[Audio Debug] Found ${activeSoundIds.size} unique sounds to restore`);
+    
+    // Stop all current sounds to ensure clean state
+    this.stopAllSounds();
+    
+    // Restart each sound with proper volume to ensure clean audio routing
+    activeSoundIds.forEach(baseId => {
       const asset = { id: baseId, url: '' };
       const volume = soundVolumes.get(baseId) || 0.3; // Use saved volume or default
       
       console.log(`[Audio Debug] Restarting ${baseId} after PiP exit with volume ${volume}`);
       this.playSound(asset, volume);
     });
+    
+    // Final check to ensure audio is properly resumed
+    if (this._audioContext && this._audioContext.state !== 'running') {
+      console.log('[Audio Debug] Final audio context resume after PiP exit');
+      this._audioContext.resume().catch(err => {
+        console.error('[Audio Debug] Final resume error:', err);
+      });
+    }
   }
 
   // Ensure all instances of the given sound assets are completely stopped
@@ -823,6 +921,95 @@ export class AudioManager {
           }
         } catch (e) {
           console.error(`[Audio Debug] Error force stopping: ${sourceId}`, e);
+        }
+      }
+    });
+  }
+
+  // Set the main page master gain node (used for muting main page when PiP is active)
+  public setMainPageMasterGain(gainNode: GainNode | null): void {
+    console.log(`[Audio Debug] Setting main page master gain: ${gainNode ? 'enabled' : 'disabled'}`);
+    
+    // If we're replacing an existing gain node, disconnect it first
+    if (this._mainPageMasterGain) {
+      try {
+        this._mainPageMasterGain.disconnect();
+      } catch (error) {
+        console.error('[Audio Debug] Error disconnecting previous master gain:', error);
+      }
+    }
+    
+    this._mainPageMasterGain = gainNode;
+    
+    // Reconnect all sounds to the new gain node setup if needed
+    if (gainNode !== null && this.activeSources.size > 0) {
+      console.log('[Audio Debug] Reconnecting active sounds to new gain setup');
+      this.reconnectAllSounds();
+    }
+  }
+  
+  // Remove duplicate sound sources after returning from background with PiP
+  public dedupAllSounds(): void {
+    if (!this._audioContext) return;
+    
+    console.log('[Audio Debug] Running deduplication on all active sounds');
+    
+    // Track unique sound IDs (without recovery suffixes)
+    const uniqueSoundIds = new Map<string, string[]>();
+    
+    // Group sound sources by their base ID
+    this.activeSources.forEach((_, id) => {
+      // Get base ID without recovery suffix
+      const baseId = id.includes('-recovery-') ? id.split('-recovery-')[0] : id;
+      
+      if (!uniqueSoundIds.has(baseId)) {
+        uniqueSoundIds.set(baseId, []);
+      }
+      
+      uniqueSoundIds.get(baseId)!.push(id);
+    });
+    
+    // Handle each group of sounds
+    uniqueSoundIds.forEach((instances, baseId) => {
+      // If we have duplicates, keep only the most recent instance
+      if (instances.length > 1) {
+        console.log(`[Audio Debug] Found ${instances.length} instances of sound ${baseId}`);
+        
+        // Sort instances by creation time (newest first)
+        // Recovery instances have timestamp in their ID
+        instances.sort((a, b) => {
+          const timeA = a.includes('-recovery-') ? 
+            parseInt(a.split('-recovery-')[1] || '0') : 0;
+          const timeB = b.includes('-recovery-') ? 
+            parseInt(b.split('-recovery-')[1] || '0') : 0;
+          return timeB - timeA; // Newest first
+        });
+        
+        // Keep the newest and stop all others
+        const newest = instances[0];
+        console.log(`[Audio Debug] Keeping newest instance: ${newest}`);
+        
+        // Stop all other instances
+        for (let i = 1; i < instances.length; i++) {
+          const id = instances[i];
+          console.log(`[Audio Debug] Stopping duplicate: ${id}`);
+          
+          try {
+            const source = this.activeSources.get(id);
+            const gain = this.activeGains.get(id);
+            
+            if (source) {
+              source.stop();
+              this.activeSources.delete(id);
+            }
+            
+            if (gain) {
+              gain.disconnect();
+              this.activeGains.delete(id);
+            }
+          } catch (e) {
+            console.error(`[Audio Debug] Error stopping duplicate: ${id}`, e);
+          }
         }
       }
     });
