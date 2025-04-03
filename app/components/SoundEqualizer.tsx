@@ -60,6 +60,8 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   const [hasInteracted, setHasInteracted] = useState(false);
   const updateTimeoutRef = useRef<NodeJS.Timeout>();
   const animationFrameRef = useRef<number>();
+  const lastSliderUpdateRef = useRef<Record<SoundType, { time: number, intensity?: string }>>({} as Record<SoundType, { time: number, intensity?: string }>);
+  const sliderThrottleTimeRef = useRef<Record<SoundType, NodeJS.Timeout>>({} as Record<SoundType, NodeJS.Timeout>);
 
   // Smooth value updates
   useEffect(() => {
@@ -104,7 +106,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
     };
   }, [sounds]);
 
-  // Debounced forest update
+  // Debounced forest update - with increased delay
   useEffect(() => {
     if (updateTimeoutRef.current) {
       clearTimeout(updateTimeoutRef.current);
@@ -134,7 +136,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
         setActiveSounds(topSounds);
         onSoundChange(topSounds);
       }
-    }, 100); // Adjust this value to control debounce delay
+    }, 350); // Increased debounce delay from 100ms to 350ms
   }, [sounds, activeSounds, onSoundChange]);
 
   // Load audio assets on mount
@@ -166,16 +168,100 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
     return soundType in audioAssets;
   };
 
-  // Memoize the slider change handler
-  const handleSliderChange = useCallback(async (sound: SoundType, value: number) => {
-    console.log('Slider Change:', {
-      sound,
-      value,
-      currentState: sounds[sound],
-      hasAudio: hasAudioAsset(sound)
-    });
+  // Get sound intensity based on value
+  const getSoundIntensity = (value: number): 'soft' | 'moderate' | 'strong' => {
+    if (value <= 0.33) return 'soft';
+    if (value <= 0.66) return 'moderate';
+    return 'strong';
+  };
 
-    // Update the sound state
+  // Track currently playing sounds and their intensities
+  const currentlyPlayingRef = useRef<Record<SoundType, string>>({} as Record<SoundType, string>);
+
+  // Handle audio playback with appropriate throttling
+  const playSoundWithThrottle = useCallback(async (sound: SoundType, value: number) => {
+    if (!hasAudioAsset(sound)) return;
+    
+    try {
+      const now = Date.now();
+      const lastUpdate = lastSliderUpdateRef.current[sound] || { time: 0 };
+      const currentIntensity = getSoundIntensity(value);
+      
+      // If value is 0, just ensure sound is stopped and exit
+      if (value === 0) {
+        // Double-check that all instances are stopped
+        const assetIds = Object.values(audioAssets[sound]).map(asset => asset.id);
+        audioManager.ensureAllStopped(assetIds);
+        // Clear currently playing reference
+        currentlyPlayingRef.current[sound] = '';
+        return;
+      }
+      
+      // Skip if the last update was too recent and intensity hasn't changed
+      if (now - lastUpdate.time < 150 && lastUpdate.intensity === currentIntensity) {
+        return;
+      }
+      
+      // Get asset for this intensity
+      const asset = audioAssets[sound]?.find(a => a.intensity === currentIntensity);
+      if (!asset) return;
+      
+      // Check if the same sound with the same intensity is already playing
+      if (currentlyPlayingRef.current[sound] === asset.id) {
+        // Same sound already playing, just update volume if needed
+        console.log(`[Audio Debug] ${sound} already playing at ${currentIntensity} intensity, adjusting volume only`);
+        const normalizedVolume = 0.3 + (value * 0.7);
+        audioManager.setVolume(asset.id, normalizedVolume);
+      } else {
+        // Different intensity or not playing - stop the current one and start the new one
+        console.log(`[Audio Debug] Changing ${sound} from ${currentlyPlayingRef.current[sound]} to ${asset.id}`);
+        // Stop all instances of this sound type
+        Object.values(audioAssets[sound]).forEach(a => {
+          audioManager.stopSound(a.id);
+        });
+        
+        // Update the last update time and intensity
+        lastSliderUpdateRef.current[sound] = { 
+          time: now,
+          intensity: currentIntensity
+        };
+        
+        // Only proceed if the sound is still active
+        if (sounds[sound].isActive && value > 0) {
+          const normalizedVolume = 0.3 + (value * 0.7);
+          
+          // Play the new sound
+          await audioManager.playSound({
+            id: asset.id,
+            url: asset.url
+          }, normalizedVolume);
+          
+          // Update currently playing reference
+          currentlyPlayingRef.current[sound] = asset.id;
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to handle audio for ${sound}:`, error);
+      
+      // Emergency cleanup on error
+      if (hasAudioAsset(sound)) {
+        Object.values(audioAssets[sound]).forEach(asset => {
+          audioManager.stopSound(asset.id);
+        });
+        // Clear currently playing reference
+        currentlyPlayingRef.current[sound] = '';
+      }
+    }
+  }, [hasAudioAsset, sounds]);
+
+  // Memoize the slider change handler with throttling
+  const handleSliderChange = useCallback((sound: SoundType, value: number) => {
+    // Clear existing timeout for this sound
+    if (sliderThrottleTimeRef.current[sound]) {
+      clearTimeout(sliderThrottleTimeRef.current[sound]);
+    }
+    
+    // Update the sound state (visual feedback immediately)
     setSounds(prev => ({
       ...prev,
       [sound]: {
@@ -185,41 +271,13 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
         showSlider: true
       }
     }));
-
-    // Handle audio playback with smooth transitions
-    if (hasAudioAsset(sound)) {
-      try {
-        // Always stop current sounds first
-        Object.values(audioAssets[sound]).forEach(asset => {
-          audioManager.stopSound(asset.id);
-        });
-
-        if (value > 0) {
-          let intensity: 'soft' | 'moderate' | 'strong';
-          if (value <= 0.33) {
-            intensity = 'soft';
-          } else if (value <= 0.66) {
-            intensity = 'moderate';
-          } else {
-            intensity = 'strong';
-          }
-
-          const normalizedVolume = 0.3 + (value * 0.7);
-          const asset = audioAssets[sound]?.find(a => a.intensity === intensity);
-          
-          if (asset) {
-            // Smooth volume transition
-            await audioManager.playSound({
-              id: asset.id,
-              url: asset.url
-            }, normalizedVolume);
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to handle audio for ${sound}:`, error);
-      }
-    }
-  }, [sounds, hasAudioAsset]);
+    
+    // Throttle the actual audio playback
+    sliderThrottleTimeRef.current[sound] = setTimeout(() => {
+      playSoundWithThrottle(sound, value);
+    }, 50); // Small delay to avoid too many rapid changes
+    
+  }, [sounds, playSoundWithThrottle]);
 
   // Memoize the icon click handler
   const handleIconClick = useCallback(async (sound: SoundType) => {
@@ -230,6 +288,7 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
     });
 
     const newValue = sounds[sound].isActive ? 0 : 0.5;
+    const newIsActive = !sounds[sound].isActive;
     
     // Update the sound state
     setSounds(prev => ({
@@ -237,29 +296,56 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
       [sound]: {
         ...prev[sound],
         targetValue: newValue,
-        isActive: !prev[sound].isActive,
+        isActive: newIsActive,
         showSlider: true
       }
     }));
 
     if (hasAudioAsset(sound)) {
       try {
-        // Always stop current sounds first
-        Object.values(audioAssets[sound]).forEach(asset => {
-          audioManager.stopSound(asset.id);
-        });
-
-        if (!sounds[sound].isActive) {
-          const asset = audioAssets[sound]?.find(a => a.intensity === 'soft');
-          if (asset) {
+        // If deactivating, stop the sound
+        if (!newIsActive) {
+          const assetIds = Object.values(audioAssets[sound]).map(asset => asset.id);
+          audioManager.ensureAllStopped(assetIds);
+          // Clear currently playing reference
+          currentlyPlayingRef.current[sound] = '';
+          return;
+        }
+        
+        // If activating, play the sound unless it's already playing
+        const currentIntensity = 'soft'; // Always start with soft when activating via icon
+        const asset = audioAssets[sound]?.find(a => a.intensity === currentIntensity);
+        
+        if (asset) {
+          // Check if this exact sound is already playing
+          if (currentlyPlayingRef.current[sound] !== asset.id) {
+            // Stop any other sounds of this type first
+            const assetIds = Object.values(audioAssets[sound]).map(a => a.id);
+            audioManager.ensureAllStopped(assetIds);
+            
+            // Play the new sound
             await audioManager.playSound({
               id: asset.id,
               url: asset.url
             }, 0.3);
+            
+            // Update currently playing reference
+            currentlyPlayingRef.current[sound] = asset.id;
+          } else {
+            console.log(`[Audio Debug] ${sound} already playing at soft intensity, not restarting`);
           }
         }
       } catch (error) {
         console.error(`Failed to handle audio for ${sound}:`, error);
+        
+        // Emergency cleanup on error
+        if (hasAudioAsset(sound)) {
+          Object.values(audioAssets[sound]).forEach(asset => {
+            audioManager.stopSound(asset.id);
+          });
+          // Clear currently playing reference
+          currentlyPlayingRef.current[sound] = '';
+        }
       }
     }
   }, [sounds, hasAudioAsset]);
