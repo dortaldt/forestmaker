@@ -11,7 +11,7 @@ interface AudioSource {
 
 export class AudioManager {
   private static instance: AudioManager;
-  private audioContext: AudioContext | null = null;
+  private _audioContext: AudioContext | null = null;
   private audioBuffers: Map<string, AudioBuffer> = new Map();
   private activeSources: Map<string, AudioBufferSourceNode> = new Map();
   private activeGains: Map<string, GainNode> = new Map();
@@ -21,6 +21,11 @@ export class AudioManager {
   public connectToPiP?: (sourceNode: AudioNode) => void;
 
   private constructor() {}
+
+  // Public getter for audio context
+  public get audioContext(): AudioContext | null {
+    return this._audioContext;
+  }
 
   static getInstance(): AudioManager {
     if (!AudioManager.instance) {
@@ -34,35 +39,35 @@ export class AudioManager {
 
     try {
       // Create audio context only when needed
-      if (!this.audioContext) {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!this._audioContext) {
+        this._audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
 
       // Resume audio context if it's suspended
-      if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
+      if (this._audioContext.state === 'suspended') {
+        await this._audioContext.resume();
       }
 
       // If context is running, we're good
-      if (this.audioContext.state === 'running') {
+      if (this._audioContext.state === 'running') {
         this.initialized = true;
         return;
       }
 
       // If context is closed, create a new one
-      if (this.audioContext.state === 'closed') {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (this._audioContext.state === 'closed') {
+        this._audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       }
 
       // Try to resume the context
-      await this.audioContext.resume();
+      await this._audioContext.resume();
       this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize audio context:', error);
       // Try to recover by creating a new context
       try {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        await this.audioContext.resume();
+        this._audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        await this._audioContext.resume();
         this.initialized = true;
       } catch (retryError) {
         console.error('Failed to recover audio context:', retryError);
@@ -80,7 +85,7 @@ export class AudioManager {
     try {
       const response = await fetch(asset.url);
       const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer);
+      const audioBuffer = await this._audioContext!.decodeAudioData(arrayBuffer);
       this.audioBuffers.set(asset.id, audioBuffer);
     } catch (error) {
       console.error(`Failed to load sound ${asset.id}:`, error);
@@ -102,19 +107,19 @@ export class AudioManager {
         return this.playSound(asset, volume);
       }
 
-      const source = this.audioContext!.createBufferSource();
-      const gainNode = this.audioContext!.createGain();
+      const source = this._audioContext!.createBufferSource();
+      const gainNode = this._audioContext!.createGain();
 
       source.buffer = buffer;
       source.loop = true;
       gainNode.gain.value = volume;
 
       source.connect(gainNode);
-      gainNode.connect(this.audioContext!.destination);
+      gainNode.connect(this._audioContext!.destination);
       
       // Connect to PiP if available
       if (this.connectToPiP) {
-        gainNode.connect(this.audioContext!.destination); // Keep audio playing through main output
+        gainNode.connect(this._audioContext!.destination); // Keep audio playing through main output
         this.connectToPiP(gainNode); // Also send to PiP
       }
 
@@ -175,11 +180,12 @@ export class AudioManager {
     this.audioBuffers.clear();
     this.activeSources.clear();
     this.activeGains.clear();
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
+    if (this._audioContext) {
+      this._audioContext.close();
+      this._audioContext = null;
     }
     this.initialized = false;
+    this.connectToPiP = undefined;
   }
 }
 

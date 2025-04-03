@@ -4,7 +4,16 @@ import { useRef, useEffect, useState } from 'react';
 import { audioManager } from '../utils/audioManager';
 import { Forest } from '../data/forests';
 import { IconButton } from './IconButton';
-import { TbPictureInPicture } from 'react-icons/tb';
+import { TbPictureInPicture, TbDeviceMobile } from 'react-icons/tb';
+
+// Extend HTMLVideoElement with webkit-specific properties
+declare global {
+  interface HTMLVideoElement {
+    webkitSupportsPresentationMode?: (mode: string) => boolean;
+    webkitSetPresentationMode?: (mode: string) => void;
+    webkitPresentationMode?: string;
+  }
+}
 
 interface PiPMiniPlayerProps {
   forest: Forest | null;
@@ -17,17 +26,46 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPiPActive, setIsPiPActive] = useState(false);
   const [isPiPSupported, setIsPiPSupported] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  // Check for PiP support on mount
+  // Add webkit-specific attributes using useEffect instead of inline JSX
   useEffect(() => {
+    if (videoRef.current) {
+      // iOS Safari requires these attributes for PiP to work properly
+      videoRef.current.setAttribute("webkit-playsinline", "true");
+      videoRef.current.setAttribute("x-webkit-airplay", "allow");
+    }
+  }, [videoRef.current]);
+
+  // Check for device and PiP support on mount
+  useEffect(() => {
+    // Check if iOS device
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    setIsIOS(isIOSDevice);
+
+    // Check PiP support
     const video = document.createElement('video');
-    setIsPiPSupported(
-      typeof video.requestPictureInPicture === 'function' && 
-      document.pictureInPictureEnabled
-    );
+    const hasPiPAPI = typeof video.requestPictureInPicture === 'function';
+    const hasPiPEnabled = document.pictureInPictureEnabled;
+    
+    // iOS Safari doesn't support standard PiP API but has its own implementation
+    const isIOSSafari = isIOSDevice && /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    const supportsPiP = isIOSSafari || (hasPiPAPI && hasPiPEnabled);
+    
+    setIsPiPSupported(supportsPiP);
+    
+    console.log('Device detection:', {
+      isIOS: isIOSDevice,
+      isIOSSafari,
+      hasPiPAPI,
+      hasPiPEnabled,
+      supportsPiP
+    });
   }, []);
 
   // Handle creating and updating the canvas with the forest image
@@ -112,7 +150,7 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
 
   // Handle audio/video stream creation
   useEffect(() => {
-    if (!canvasRef.current || !isVisible || !audioManager) return;
+    if (!canvasRef.current || !isVisible) return;
     
     // Function to create or update stream
     const setupStream = async () => {
@@ -120,6 +158,7 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
         // Clean up previous stream
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
+          setIsPlaying(false);
         }
         
         // Get canvas stream for video
@@ -128,12 +167,12 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
         
         const canvasStream = canvas.captureStream(30); // 30 FPS
         
-        // Create audio destination node
+        // Make sure audio manager is initialized
         if (!audioManager.audioContext) {
           await audioManager.initialize();
         }
         
-        // Get the audio context and create a destination
+        // Get the audio context
         const audioContext = audioManager.audioContext;
         if (!audioContext) {
           throw new Error('Audio context not available');
@@ -150,10 +189,27 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
         // Connect all active sources to this destination
         audioManager.connectAllToPiP();
         
+        // Add at least a silent audio track if no audio tracks
+        let audioTracks = audioDestination.stream.getAudioTracks();
+        if (audioTracks.length === 0) {
+          console.log('No audio tracks, creating silent audio track');
+          // Create a silent oscillator and connect it to the destination
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          gainNode.gain.value = 0.01; // Very quiet but not silent
+          oscillator.connect(gainNode);
+          gainNode.connect(audioDestination);
+          oscillator.start();
+          
+          // Wait for the track to be created
+          await new Promise(resolve => setTimeout(resolve, 100));
+          audioTracks = audioDestination.stream.getAudioTracks();
+        }
+        
         // Combine video and audio tracks
         const combinedStream = new MediaStream([
           ...canvasStream.getVideoTracks(),
-          ...audioDestination.stream.getAudioTracks()
+          ...audioTracks
         ]);
         
         // Save reference to the stream
@@ -162,6 +218,23 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
         // Set the stream as the video source
         if (videoRef.current) {
           videoRef.current.srcObject = combinedStream;
+          try {
+            // Auto-play the video
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise
+                .then(() => {
+                  console.log('Video playback started successfully');
+                  setIsPlaying(true);
+                })
+                .catch(error => {
+                  console.error('Video playback failed:', error);
+                  setIsPlaying(false);
+                });
+            }
+          } catch (error) {
+            console.error('Error auto-playing video:', error);
+          }
         }
       } catch (error) {
         console.error('Failed to setup PiP stream:', error);
@@ -177,9 +250,8 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
       }
       
       // Remove the PiP connection method
-      if (audioManager) {
+      if (audioManager.connectToPiP) {
         audioManager.connectToPiP = undefined;
-        audioManager.connectAllToPiP = undefined;
       }
     };
   }, [isVisible, activeSounds]);
@@ -189,48 +261,111 @@ export default function PiPMiniPlayer({ forest, activeSounds, isVisible }: PiPMi
     try {
       if (!videoRef.current) return;
       
+      // Make sure video has focus
+      videoRef.current.focus();
+      
       // Ensure video is playing (required for PiP)
-      await videoRef.current.play();
+      if (!isPlaying) {
+        try {
+          await videoRef.current.play();
+          setIsPlaying(true);
+        } catch (e) {
+          console.error('Failed to play video before PiP:', e);
+          // Try to trigger play from user interaction
+          alert('Please tap on the video to start playback then try again. Audio playback requires user interaction on your device.');
+          return;
+        }
+      }
       
-      // Request PiP mode
-      await videoRef.current.requestPictureInPicture();
-      setIsPiPActive(true);
-      
-      // Handle exiting PiP
-      videoRef.current.addEventListener('leavepictureinpicture', () => {
-        setIsPiPActive(false);
-      });
+      // Request PiP mode - different methods for different platforms
+      if (isIOS) {
+        // iOS uses webkitSetPresentationMode
+        if (videoRef.current.webkitSupportsPresentationMode && 
+            typeof videoRef.current.webkitSetPresentationMode === 'function') {
+          videoRef.current.webkitSetPresentationMode('picture-in-picture');
+          setIsPiPActive(true);
+          
+          // iOS doesn't have an event for leaving PiP, so we need to check periodically
+          const checkInterval = setInterval(() => {
+            if (videoRef.current && 
+                videoRef.current.webkitPresentationMode !== 'picture-in-picture') {
+              setIsPiPActive(false);
+              clearInterval(checkInterval);
+            }
+          }, 1000);
+        } else {
+          throw new Error('iOS PiP not supported in this browser');
+        }
+      } else {
+        // Standard PiP API
+        await videoRef.current.requestPictureInPicture();
+        setIsPiPActive(true);
+        
+        // Handle exiting PiP
+        videoRef.current.addEventListener('leavepictureinpicture', () => {
+          setIsPiPActive(false);
+        });
+      }
     } catch (error) {
       console.error('Failed to enter PiP mode:', error);
+      alert('Failed to enter Picture-in-Picture mode. This may not be supported in your browser.');
     }
   };
 
-  // Don't render if not visible or PiP not supported
-  if (!isVisible || !isPiPSupported) return null;
+  // Don't render if not visible
+  if (!isVisible) return null;
 
   return (
     <div className="fixed bottom-20 right-4 z-50">
       <div className="bg-black rounded-lg overflow-hidden shadow-xl w-64">
-        <canvas 
-          ref={canvasRef} 
-          className="w-full h-auto"
-          style={{ display: 'block' }}
-        />
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted={false}
-          style={{ display: 'none' }}
-        />
-        <div className="absolute bottom-2 right-2">
-          <IconButton 
-            icon={TbPictureInPicture} 
-            onClick={enterPiPMode} 
-            variant="secondary"
-            tooltip="Open Picture-in-Picture"
-            disabled={isPiPActive}
+        <div className="relative w-full aspect-video">
+          {/* Canvas for drawing - hidden in final version */}
+          <canvas 
+            ref={canvasRef} 
+            className="absolute inset-0 w-full h-full"
+            style={{ display: 'none' }}
           />
+          {/* Video element with controls */}
+          <video 
+            ref={videoRef} 
+            className="w-full h-full"
+            autoPlay 
+            playsInline 
+            controls
+            loop
+            muted={false}
+            onClick={() => videoRef.current?.play()}
+          />
+          
+          {/* Info overlay when not playing */}
+          {!isPlaying && (
+            <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+              <p className="text-white text-center p-4">
+                Tap to start playback
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="p-2 flex justify-between items-center bg-gray-800">
+          <span className="text-white text-sm truncate">
+            {forest?.name || 'Select a forest'}
+          </span>
+          <div className="flex space-x-2">
+            {isIOS && (
+              <span className="text-white text-xs flex items-center">
+                <TbDeviceMobile className="mr-1" size={16} />
+                iOS
+              </span>
+            )}
+            <IconButton 
+              icon={TbPictureInPicture} 
+              onClick={enterPiPMode} 
+              variant="secondary"
+              size="sm"
+              tooltip={isPiPSupported ? "Open Picture-in-Picture" : "PiP not supported"}
+              disabled={isPiPActive || !isPiPSupported}
+            />
+          </div>
         </div>
       </div>
     </div>
