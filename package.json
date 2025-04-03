@@ -7,10 +7,16 @@
     "dev-stable": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "dev-https": "NODE_TLS_REJECT_UNAUTHORIZED=0 next dev -p 3000 -H 0.0.0.0",
+    "find-ip": "node scripts/find-local-ip.js",
+    "https-proxy": "node scripts/https-proxy.js",
+    "mobile-dev": "concurrently \"npm run dev\" \"npm run https-proxy\""
   },
   "dependencies": {
     "@vercel/analytics": "^1.5.0",
+    "concurrently": "^8.2.2",
+    "http-proxy": "^1.18.1",
     "next": "^14.2.26",
     "react": "^18",
     "react-dom": "^18",
