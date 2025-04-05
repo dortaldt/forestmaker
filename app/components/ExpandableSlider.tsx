@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { IconType } from 'react-icons';
+import { TbVolumeOff } from 'react-icons/tb';
 
 interface ExpandableSliderProps {
   initialValue?: number;
@@ -297,8 +298,6 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
           />
         )}
 
-        {/* iOS-style slider knob indicator removed */}
-
         {/* Track markings/scales - enhanced visibility when expanded */}
         {isExpanded && (
           <div className="absolute inset-x-4 top-0 bottom-0 flex flex-col justify-between py-6 z-5 pointer-events-none">
@@ -341,6 +340,35 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Mute button - floating above the slider with glass effect */}
+      {isExpanded && value > 0 && (
+        <div 
+          className="w-10 h-10 rounded-full 
+                   flex items-center justify-center cursor-pointer
+                   border border-white/20 
+                   hover:scale-105 active:scale-95 transition-transform duration-150"
+          style={{
+            position: 'absolute',
+            top: `-172px`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999,
+            background: 'rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.3)'
+          }}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent triggering parent click events
+            setValue(0);
+            setIsExpanded(false);
+            onChange?.(0); // Notify parent component
+          }}
+        >
+          <TbVolumeOff size={18} className="text-white" />
+        </div>
+      )}
     </div>
   );
 };
