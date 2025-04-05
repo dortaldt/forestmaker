@@ -90,6 +90,12 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   // Handle click to expand/collapse
   const handleClick = () => {
     if (!disabled) {
+      // If slider is off (value is 0), set it to 50% when clicked
+      if (value === 0) {
+        const defaultValue = Math.round(min + (max - min) * 0.5); // 50% between min and max
+        setValue(defaultValue);
+        onChange?.(defaultValue);
+      }
       setIsExpanded(!isExpanded);
     }
   };
@@ -109,23 +115,22 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     }
   };
 
-  // Handle mouse/touch move for dragging
+  // Handle dragging
   const handleDrag = (clientY: number) => {
     if (!isDragging || !sliderRef.current) return;
     
     const sliderRect = sliderRef.current.getBoundingClientRect();
     const sliderTotalHeight = sliderRect.height;
-    const trackHeight = sliderTotalHeight - buttonHeight;
     
-    // Calculate position relative to the top of the slider track (excluding button area)
+    // Calculate position relative to the top of the slider (including button area)
     const offsetY = clientY - sliderRect.top;
     
-    // Constrain to track area only (excluding button)
-    const maxY = sliderTotalHeight - buttonHeight;
+    // Constrain to entire slider area
+    const maxY = sliderTotalHeight;
     const minY = 0;
     const constrainedY = Math.max(minY, Math.min(maxY, offsetY));
     
-    // Calculate percentage (0% at bottom of track, 100% at top)
+    // Calculate percentage (0% at bottom, 100% at top)
     const percentage = 1 - constrainedY / maxY;
     const newValue = Math.round(min + percentage * (max - min));
     
@@ -133,14 +138,28 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     onChange?.(newValue);
   };
 
-  // Handle mouse move
+  // Handle mouse move with smoother animation
   useEffect(() => {
+    let animationFrameId: number | null = null;
+    
     const handleMouseMove = (e: MouseEvent) => {
       e.preventDefault();
-      handleDrag(e.clientY);
+      
+      // Use requestAnimationFrame for smoother updates
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+      
+      animationFrameId = requestAnimationFrame(() => {
+        handleDrag(e.clientY);
+      });
     };
     
     const handleMouseUp = () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
       setIsDragging(false);
     };
     
@@ -150,6 +169,9 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     }
     
     return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
@@ -171,11 +193,14 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     if (isDragging) {
       window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleTouchEnd);
+      // Add touchcancel to handle cases where the touch is interrupted
+      window.addEventListener('touchcancel', handleTouchEnd);
     }
     
     return () => {
       window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [isDragging]);
 
@@ -218,29 +243,56 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
           zIndex: isExpanded ? 9 : 1, // Lower z-index for the container
           transform: 'translateX(-50%)',
           opacity: 1,
+          borderRadius: '0.75rem',
         }}
         ref={sliderRef}
         onClick={handleClick}
         onMouseDown={isExpanded ? handleDragStart : undefined}
         onTouchStart={isExpanded ? handleDragStart : undefined}
       >
+        {/* Volume indicator border - appears on the border of the button */}
+        {!isExpanded && value > 0 && (
+          <div 
+            className="absolute inset-0 pointer-events-none transition-all duration-200"
+            style={{
+              borderRadius: '0.75rem',
+              background: 'transparent',
+              border: '2px solid transparent',
+              backgroundImage: `conic-gradient(
+                #f97316 0deg ${(value / max) * 360}deg,
+                rgba(255, 255, 255, 0.5) ${(value / max) * 360}deg 360deg
+              )`,
+              backgroundOrigin: 'border-box',
+              backgroundClip: 'border-box',
+              WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+              WebkitMaskComposite: 'xor',
+              maskComposite: 'exclude',
+              zIndex: 25
+            }}
+          />
+        )}
+        
         {/* Track area - only visible when expanded */}
         {isExpanded && (
-          <div className="absolute inset-x-0 top-0 bottom-[80px] bg-transparent" />
+          <div className="absolute inset-x-0 top-0 bottom-0 bg-transparent" />
         )}
         
         {/* Fill area - enhanced contrast and visibility */}
         {isExpanded && (
           <div 
-            className={`absolute inset-x-0 bottom-[80px] rounded-t-xl
+            className={`absolute inset-x-0 bottom-0
+              rounded-xl
               bg-gradient-to-t from-orange-600 to-orange-400
-              transition-all duration-150 pointer-events-none
+              transition-all duration-100 ease-out pointer-events-none
               shadow-[0_0_10px_rgba(0,0,0,0.15)]`}
             style={{ 
-              height: `${((value - min) / (max - min)) * (expandedHeight - buttonHeight)}px`,
-              maxHeight: `${expandedHeight - buttonHeight}px`,
+              height: `${((value - min) / (max - min)) * expandedHeight}px`,
+              maxHeight: `${expandedHeight}px`,
               zIndex: 10,
-              transform: isDragging ? 'scale(1.01)' : 'scale(1)',
+              willChange: 'height, transform',
+              transform: isDragging ? 'scale(1.005)' : 'scale(1)',
+              borderRadius: '0.75rem',
+              overflow: 'hidden'
             }}
           />
         )}
@@ -249,7 +301,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
 
         {/* Track markings/scales - enhanced visibility when expanded */}
         {isExpanded && (
-          <div className="absolute inset-x-4 top-0 bottom-[80px] flex flex-col justify-between py-6 z-5 pointer-events-none">
+          <div className="absolute inset-x-4 top-0 bottom-0 flex flex-col justify-between py-6 z-5 pointer-events-none">
             {[...Array(5)].map((_, i) => (
               <div 
                 key={`mark-${i}`} 
@@ -266,14 +318,13 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
         {/* Button/handle at bottom - draggable when expanded */}
         <div 
           className={`absolute bottom-0 left-0 right-0 flex flex-col items-center justify-center
-            rounded-xl transition-all duration-200 cursor-pointer
             ${isExpanded ? 'rounded-b-xl rounded-t-none' : 'rounded-xl'}
-            border-t ${isExpanded ? 'border-t-gray-400/30' : 'border-t-transparent'}
-            ${isDragging ? 'bg-gray-200/60' : ''}`}
+            border-t ${isExpanded ? 'border-t-gray-400/30' : 'border-t-transparent'}`}
           style={{ 
             height: buttonHeight,
             zIndex: 20,
-            transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+            transform: 'scale(1)',
+            borderRadius: isExpanded ? '0 0 0.75rem 0.75rem' : '0.75rem',
           }}
           onClick={handleClick}
         >
