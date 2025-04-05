@@ -38,6 +38,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   const buttonRef = useRef<HTMLDivElement>(null);
   const expandedHeight = 200; // Height when expanded (increased)
   const collapsedHeight = 80; // Height when collapsed (increased)
+  const buttonHeight = collapsedHeight; // Define button height separately
   
   // Calculate current height based on expansion state
   const currentHeight = isExpanded ? expandedHeight : collapsedHeight;
@@ -114,21 +115,18 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     
     const sliderRect = sliderRef.current.getBoundingClientRect();
     const sliderTotalHeight = sliderRect.height;
-    const buttonHeight = collapsedHeight;
     const trackHeight = sliderTotalHeight - buttonHeight;
     
-    // Calculate position relative to the top of the slider
+    // Calculate position relative to the top of the slider track (excluding button area)
     const offsetY = clientY - sliderRect.top;
     
-    // Calculate percentage from bottom (0) to top (100)
-    // Constrain position to the track area (not the button)
-    const maxY = sliderTotalHeight - buttonHeight / 2;
-    const minY = buttonHeight / 2;
+    // Constrain to track area only (excluding button)
+    const maxY = sliderTotalHeight - buttonHeight;
+    const minY = 0;
     const constrainedY = Math.max(minY, Math.min(maxY, offsetY));
     
-    // For the percentage calculation, 0% is at the bottom of the track
-    // and 100% is at the top of the track
-    const percentage = 1 - (constrainedY - minY) / (maxY - minY);
+    // Calculate percentage (0% at bottom of track, 100% at top)
+    const percentage = 1 - constrainedY / maxY;
     const newValue = Math.round(min + percentage * (max - min));
     
     setValue(newValue);
@@ -184,7 +182,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   // Get the appropriate color classes based on component state and value
   const getActiveTextColor = () => {
     if (disabled) return 'text-gray-400';
-    return value > 0 ? `text-${activeColor}` : 'text-gray-400';
+    return value > 0 ? 'text-orange-500' : 'text-gray-400';
   };
   
   // Determine which color LED indicator to show
@@ -217,7 +215,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
         style={{ 
           width: '100%',
           height: isExpanded ? expandedHeight : collapsedHeight,
-          zIndex: isExpanded ? 9999 : 1,
+          zIndex: isExpanded ? 9 : 1, // Lower z-index for the container
           transform: 'translateX(-50%)',
           opacity: 1,
         }}
@@ -226,30 +224,40 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
         onMouseDown={isExpanded ? handleDragStart : undefined}
         onTouchStart={isExpanded ? handleDragStart : undefined}
       >
-        {/* Fill area - covers the bottom portion up to the current value */}
+        {/* Track area - only visible when expanded */}
+        {isExpanded && (
+          <div className="absolute inset-x-0 top-0 bottom-[80px] bg-transparent" />
+        )}
+        
+        {/* Fill area - enhanced contrast and visibility */}
         {isExpanded && (
           <div 
-            className={`absolute inset-x-0 bottom-0 rounded-xl
-              bg-gradient-to-t from-${activeColor}/60 to-${activeColor}/30
-              transition-height duration-150 pointer-events-none`}
+            className={`absolute inset-x-0 bottom-[80px] rounded-t-xl
+              bg-gradient-to-t from-orange-600 to-orange-400
+              transition-all duration-150 pointer-events-none
+              shadow-[0_0_10px_rgba(0,0,0,0.15)]`}
             style={{ 
-              height: `${((value - min) / (max - min)) * (expandedHeight)}px`,
-              zIndex: 1,
+              height: `${((value - min) / (max - min)) * (expandedHeight - buttonHeight)}px`,
+              maxHeight: `${expandedHeight - buttonHeight}px`,
+              zIndex: 10,
+              transform: isDragging ? 'scale(1.01)' : 'scale(1)',
             }}
           />
         )}
 
-        {/* Track markings/scales - subtle lines - only visible when expanded */}
+        {/* iOS-style slider knob indicator removed */}
+
+        {/* Track markings/scales - enhanced visibility when expanded */}
         {isExpanded && (
-          <div className="absolute inset-x-4 top-0 bottom-[80px] flex flex-col justify-between py-6 z-10 pointer-events-none">
-            {[...Array(11)].map((_, i) => (
+          <div className="absolute inset-x-4 top-0 bottom-[80px] flex flex-col justify-between py-6 z-5 pointer-events-none">
+            {[...Array(5)].map((_, i) => (
               <div 
                 key={`mark-${i}`} 
                 className="w-full flex items-center"
               >
-                <div className="w-1 h-0.5 bg-white/20"></div>
-                <div className="flex-grow h-px bg-white/10"></div>
-                <div className="w-1 h-0.5 bg-white/20"></div>
+                <div className="w-2 h-0.5 bg-white/40"></div>
+                <div className="flex-grow h-[1.5px] bg-white/30"></div>
+                <div className="w-2 h-0.5 bg-white/40"></div>
               </div>
             ))}
           </div>
@@ -258,22 +266,26 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
         {/* Button/handle at bottom - draggable when expanded */}
         <div 
           className={`absolute bottom-0 left-0 right-0 flex flex-col items-center justify-center
-            rounded-xl transition-colors duration-200 cursor-pointer
-            ${isExpanded ? 'rounded-b-xl' : 'rounded-xl'}
-            border-t ${isExpanded ? 'border-t-gray-400/30' : 'border-t-transparent'}`}
+            rounded-xl transition-all duration-200 cursor-pointer
+            ${isExpanded ? 'rounded-b-xl rounded-t-none' : 'rounded-xl'}
+            border-t ${isExpanded ? 'border-t-gray-400/30' : 'border-t-transparent'}
+            ${isDragging ? 'bg-gray-200/60' : ''}`}
           style={{ 
-            height: collapsedHeight,
+            height: buttonHeight,
             zIndex: 20,
+            transform: isDragging ? 'scale(1.02)' : 'scale(1)',
           }}
           onClick={handleClick}
         >
           <div className="flex flex-col items-center justify-evenly h-full py-2 px-1">
-            {/* Icon and labels */}
+            {/* Icon and label */}
             {Icon && <Icon size={24} className={`transition-colors ${getActiveTextColor()}`} />}
             
             <div className="flex flex-col items-center">
               {label && <span className="text-[10px] font-medium text-gray-700">{label}</span>}
-              {value > 0 && <span className="text-[10px] font-bold text-gray-800">{Math.round(value)}%</span>}
+              {/* Removed percentage display as requested */}
+              
+              {/* iOS-style volume indicator removed */}
             </div>
           </div>
         </div>
