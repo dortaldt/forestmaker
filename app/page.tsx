@@ -4,10 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import SoundEqualizer from './components/SoundEqualizer';
 import ForestMatch from './components/ForestMatch';
 import PiPMiniPlayer, { PiPMiniPlayerHandle } from './components/PiPMiniPlayer';
+import SpotifyIntegration from './components/SpotifyIntegration';
 import { findMatchingForest, SoundProfile, SoundType } from './utils/forestMatcher';
 import { Forest, forests } from './data/forests';
 import Image from 'next/image';
-import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray, TbPictureInPicture, TbPictureInPictureOff } from 'react-icons/tb';
+import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray, TbPictureInPicture, TbPictureInPictureOff, TbBrandSpotify } from 'react-icons/tb';
+import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from './utils/env';
 
 const soundIcons = {
   wind: TbWind,
@@ -22,6 +24,19 @@ const soundIcons = {
   spiritual: TbPray
 } as const;
 
+const soundLabels: Record<SoundType, string> = {
+  wind: 'Wind',
+  rain: 'Rain',
+  birds: 'Birds',
+  thunder: 'Thunder',
+  water: 'Water',
+  insects: 'Insects',
+  mammals: 'Mammals',
+  fire: 'Fire',
+  ambient: 'Ambient',
+  spiritual: 'Spiritual'
+};
+
 export default function Home() {
   const [currentForest, setCurrentForest] = useState<Forest | null>(null);
   const [activeSounds, setActiveSounds] = useState<Set<SoundType>>(new Set());
@@ -32,6 +47,8 @@ export default function Home() {
   const [nextImageLoaded, setNextImageLoaded] = useState(false);
   const [isPiPVisible, setIsPiPVisible] = useState(false);
   const pipPlayerRef = useRef<PiPMiniPlayerHandle>(null);
+  const [soundLevels, setSoundLevels] = useState<Record<SoundType, number>>({} as Record<SoundType, number>);
+  const [isSpotifyVisible, setIsSpotifyVisible] = useState(false);
 
   // Preload forest images
   useEffect(() => {
@@ -74,11 +91,12 @@ export default function Home() {
     }
   }, [currentForest?.imageUrl]);
 
-  const handleSoundChange = (activeSounds: SoundType[]) => {
+  const handleSoundChange = (activeSounds: SoundType[], levels?: Record<SoundType, number>) => {
     console.log('Page Sound Change:', {
       activeSounds,
       hasInteracted,
-      currentForest
+      currentForest,
+      levels
     });
 
     // Set hasInteracted to true on first interaction
@@ -89,6 +107,11 @@ export default function Home() {
 
     // Update active sounds
     setActiveSounds(new Set(activeSounds));
+    
+    // Update sound levels if provided
+    if (levels) {
+      setSoundLevels(levels);
+    }
 
     // Create a sound profile from the active sounds
     const soundProfile: SoundProfile = {} as SoundProfile;
@@ -171,8 +194,8 @@ export default function Home() {
   };
 
   return (
-    <main className="fixed inset-0 overflow-hidden">
-      {/* Background image with transition */}
+    <main className="h-screen overflow-hidden relative">
+      {/* Background image with transition - fixed to viewport */}
       <div className="fixed inset-0 z-0">
         {/* Previous image */}
         <div 
@@ -206,35 +229,113 @@ export default function Home() {
             quality={90}
           />
         </div>
+        
+        {/* Overlay gradient for better text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/50"></div>
       </div>
 
-      {/* Content */}
-      <div className="relative h-full flex flex-col">
-        {/* PiP Toggle Button - Hidden on desktop, visible on mobile */}
-        <div className="fixed top-4 right-4 z-50 flex flex-row items-center md:hidden">
-          <span className="text-white text-xs bg-black/10 px-3 py-1.5 rounded-l-md whitespace-nowrap">
-            Play in background
-          </span>
-          <button
-            onClick={togglePiP}
-            className="bg-black/10 hover:bg-black/20 text-white p-2 rounded-r-md"
-            aria-label={isPiPVisible ? "Hide Picture-in-Picture" : "Show Picture-in-Picture"}
-            title={isPiPVisible ? "Hide Picture-in-Picture" : "Show Picture-in-Picture"}
-          >
-            {isPiPVisible ? <TbPictureInPictureOff size={20} /> : <TbPictureInPicture size={20} />}
-          </button>
+      {/* Content - fixed height */}
+      <div className="relative h-full flex flex-col z-10">
+        {/* Fixed header with app title and controls */}
+        <div className="w-full flex justify-between items-center py-3 px-4 z-20 bg-gradient-to-b from-black/30 to-transparent">
+          {/* App Title */}
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight 
+                          bg-gradient-to-b from-gray-200/40 to-gray-300/40 
+                          border border-gray-400/20
+                          backdrop-filter backdrop-blur-[2px]
+                          shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]
+                          px-4 py-2 rounded-xl text-gray-800">
+              forest<span className="text-orange-500">maker</span>
+            </h1>
+          </div>
+
+          {/* Control Buttons */}
+          <div className="flex flex-row items-center space-x-2">
+            {/* Spotify Button */}
+            <button
+              onClick={() => setIsSpotifyVisible(!isSpotifyVisible)}
+              className="bg-gradient-to-b from-gray-200/40 to-gray-300/40 
+                       border border-gray-400/20
+                       backdrop-filter backdrop-blur-[2px]
+                       shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]
+                       hover:shadow-md active:shadow-inner
+                       text-gray-700 p-2.5 rounded-xl transition-all duration-200"
+              aria-label={isSpotifyVisible ? "Hide Spotify" : "Show Spotify"}
+              title={isSpotifyVisible ? "Hide Spotify" : "Show Spotify"}
+            >
+              <TbBrandSpotify size={20} className={isSpotifyVisible ? "text-green-600" : "text-gray-700"} />
+            </button>
+            
+            {/* PiP Toggle Button */}
+            <div className="flex flex-row items-center">
+              <span className="hidden sm:inline-block text-gray-800 text-xs font-medium 
+                             bg-gradient-to-b from-gray-200/40 to-gray-300/40 
+                             border border-gray-400/20 border-r-0
+                             backdrop-filter backdrop-blur-[2px]
+                             shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]
+                             px-3 py-1.5 rounded-l-xl whitespace-nowrap">
+                Play in background
+              </span>
+              <button
+                onClick={togglePiP}
+                className="bg-gradient-to-b from-gray-200/40 to-gray-300/40 
+                         border border-gray-400/20 sm:border-l-0
+                         backdrop-filter backdrop-blur-[2px]
+                         shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]
+                         hover:shadow-md active:shadow-inner
+                         text-gray-700 p-2.5 rounded-xl sm:rounded-l-none transition-all duration-200"
+                aria-label={isPiPVisible ? "Hide Picture-in-Picture" : "Show Picture-in-Picture"}
+                title={isPiPVisible ? "Hide Picture-in-Picture" : "Show Picture-in-Picture"}
+              >
+                {isPiPVisible ? <TbPictureInPictureOff size={20} /> : <TbPictureInPicture size={20} />}
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Forest Match - Positioned below the PiP button */}
-        <div className="flex-none pt-16 md:pt-20 px-4">
+        {/* Top section with forest info - compact */}
+        <div className="py-2 px-4">
           <ForestMatch forest={currentForest} />
         </div>
 
-        {/* Sound Equalizer - Fixed at bottom */}
-        <div className="flex-none">
-          <div className="w-full py-6">
-            <SoundEqualizer onSoundChange={handleSoundChange} />
+        {/* Spotify Integration (Floating Panel) */}
+        <div className={`fixed top-20 right-4 z-30 w-80 transform transition-all duration-300 shadow-xl ${
+          isSpotifyVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        }`}>
+          <div className="relative">
+            {/* Tab handle for closed state */}
+            <button 
+              onClick={() => setIsSpotifyVisible(true)} 
+              className={`absolute left-0 top-10 transform -translate-x-full 
+                        bg-gradient-to-b from-green-500/70 to-green-600/60 
+                        border border-green-500/30
+                        backdrop-filter backdrop-blur-[2px]
+                        shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]
+                        text-white py-2 px-3 rounded-l-lg flex items-center ${
+                isSpotifyVisible ? 'opacity-0 pointer-events-none' : 'opacity-100'
+              }`}
+              aria-label="Open Spotify controls"
+            >
+              <TbBrandSpotify size={18} className="mr-2" />
+              <span className="text-sm">Spotify</span>
+            </button>
+            
+            <SpotifyIntegration 
+              clientId={SPOTIFY_CLIENT_ID} 
+              clientSecret={SPOTIFY_CLIENT_SECRET}
+              isVisible={isSpotifyVisible} 
+            />
           </div>
+        </div>
+
+        {/* Sound Equalizer - main content area with fixed height */}
+        <div className="flex-1 h-full overflow-visible px-2 pt-3 md:pt-4">
+          <SoundEqualizer 
+            onSoundChange={(sounds: SoundType[], levels?: Record<SoundType, number>) => 
+              handleSoundChange(sounds, levels)
+            } 
+          />
         </div>
         
         {/* PiP Mini Player */}

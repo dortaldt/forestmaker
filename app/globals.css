@@ -24,45 +24,246 @@ input[type="range"] {
   appearance: none;
   background: transparent;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 /* Styles for Webkit browsers (Chrome, Safari) */
 input[type="range"]::-webkit-slider-runnable-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(25, 25, 25, 0.6);
   border-radius: 9999px;
-  height: 8px;
+  height: 10px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  margin-top: -4px;
-  background-color: #22c55e;
+  margin-top: -10px;
+  background: linear-gradient(to bottom, #ff7a45, #ff5722);
   border-radius: 50%;
-  height: 16px;
-  width: 16px;
+  height: 28px;
+  width: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.2);
 }
 
 /* Styles for Firefox */
 input[type="range"]::-moz-range-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(25, 25, 25, 0.6);
   border-radius: 9999px;
-  height: 8px;
+  height: 10px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 input[type="range"]::-moz-range-thumb {
-  background-color: #22c55e;
-  border: none;
+  background: linear-gradient(to bottom, #ff7a45, #ff5722);
+  border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 50%;
-  height: 16px;
-  width: 16px;
+  height: 28px;
+  width: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.6);
 }
 
-/* Vertical slider styles */
-input[type="range"][orient="vertical"] {
+/* Vertical slider styles - only for desktop */
+input[type="range"].vertical-slider {
   writing-mode: bt-lr; /* IE */
   -webkit-appearance: slider-vertical; /* Chromium */
-  width: 8px;
+  width: 16px;
   height: 175px;
-  padding: 0 5px;
+  padding: 0 8px;
+}
+
+/* Horizontal slider styles - for mobile */
+input[type="range"].horizontal-slider {
+  width: 100%;
+  height: 16px;
+  padding: 8px 0;
+}
+
+/* Focus state for better accessibility */
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+input[type="range"]:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 2px rgba(255, 87, 34, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+/* Active state for better touch feedback */
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.1);
+  background: linear-gradient(to bottom, #ff8c5a, #ff6937);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.1);
+  background: linear-gradient(to bottom, #ff8c5a, #ff6937);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+
+/* Button skeuomorphic styles */
+.skeuomorphic-button {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.skeuomorphic-button:active {
+  transform: translateY(2px);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Card with depth */
+.depth-card {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 8px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.07);
+}
+
+/* Semi-transparent card for mobile */
+.mobile-card {
+  background-color: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 1px rgba(255, 255, 255, 0.07);
+}
+
+/* Highlight pulse animation for sound controllers */
+@keyframes highlight-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+.highlight-pulse {
+  animation: highlight-pulse 1s ease-out 2;
+  z-index: 5;
+  position: relative;
+}
+
+/* ----- SKEUOMORPHIC STUDIO EQUIPMENT STYLES ----- */
+
+/* Frosted glass panel */
+.frost-glass {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Brushed metal texture */
+.brushed-metal {
+  background: linear-gradient(135deg, 
+    rgba(190, 190, 190, 0.8) 0%, 
+    rgba(210, 210, 210, 0.8) 47%, 
+    rgba(230, 230, 230, 0.8) 50%, 
+    rgba(210, 210, 210, 0.8) 53%, 
+    rgba(190, 190, 190, 0.8) 100%);
+  background-size: 6px 6px;
+  box-shadow: 
+    0 2px 5px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(120, 120, 120, 0.5);
+}
+
+/* Metal knob */
+.metal-knob {
+  background: radial-gradient(ellipse at center, 
+    rgba(240, 240, 240, 1) 0%, 
+    rgba(190, 190, 190, 1) 70%, 
+    rgba(170, 170, 170, 1) 100%);
+  border: 1px solid rgba(120, 120, 120, 0.5);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* Realistic fader track */
+.fader-track {
+  background: linear-gradient(to right,
+    rgba(25, 25, 25, 0.9) 0%,
+    rgba(40, 40, 40, 0.9) 10%,
+    rgba(40, 40, 40, 0.9) 90%,
+    rgba(25, 25, 25, 0.9) 100%);
+  box-shadow: 
+    inset 0 1px 5px rgba(0, 0, 0, 0.8),
+    inset 0 0 2px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(50, 50, 50, 0.8);
+}
+
+/* LED glow effect */
+.led-glow {
+  filter: drop-shadow(0 0 3px currentColor);
+  animation: led-pulse 2s infinite alternate;
+}
+
+@keyframes led-pulse {
+  0% {
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  100% {
+    filter: drop-shadow(0 0 4px currentColor);
+  }
+}
+
+/* Equipment panel */
+.equipment-panel {
+  background: linear-gradient(to bottom,
+    rgba(235, 235, 235, 1) 0%,
+    rgba(215, 215, 215, 1) 100%);
+  border-radius: 8px;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(180, 180, 180, 0.7);
+}
+
+/* Control detail ring */
+.control-ring {
+  background: transparent;
+  border: 1px solid rgba(60, 60, 60, 0.3);
+  box-shadow: 
+    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Engraved text effect */
+.engraved-text {
+  color: rgba(40, 40, 40, 0.85);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+/* Switch indicator */
+.switch-indicator {
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 8px currentColor,
+    0 0 16px currentColor;
 }
