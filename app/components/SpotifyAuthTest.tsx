@@ -24,12 +24,11 @@ const SpotifyAuthTest: React.FC = () => {
       addLog('Initializing Spotify client...');
       const clientId = 'c8d3564139264003a8f13a9e8adc80ef'; // Replace with your client ID
       const redirectUri = `${window.location.origin}/spotify-callback`;
-      const clientSecret = ''; // Add empty client secret or appropriate value
       
       addLog(`Client ID: ${clientId}`);
       addLog(`Redirect URI: ${redirectUri}`);
       
-      const client = initializeSpotify(clientId, clientSecret, redirectUri);
+      const client = initializeSpotify(clientId, '', redirectUri);
       setClientInitialized(true);
       
       if (client) {

@@ -14,7 +14,6 @@ interface ExpandableSliderProps {
   label?: string;
   activeColor?: string;
   id?: string; // Add ID for tracking active slider
-  size?: number; // Optional size prop for custom sizing
 }
 
 // Create a global event name for slider state changes
@@ -31,7 +30,6 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   label,
   activeColor = 'blue-600',
   id = 'slider-' + Math.random().toString(36).substring(2, 9), // Generate a random ID if none provided
-  size,
 }) => {
   const [value, setValue] = useState(initialValue);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -43,6 +41,21 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   
   // Calculate current height based on expansion state
   const currentHeight = isExpanded ? expandedHeight : collapsedHeight;
+
+  // Disable body scrolling while dragging
+  useEffect(() => {
+    if (isDragging) {
+      // Save the current body style
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      // Prevent scrolling
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        // Restore scrolling when done dragging
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isDragging]);
 
   // Listen for other sliders being expanded
   useEffect(() => {
@@ -86,6 +99,13 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     
     e.preventDefault();
     setIsDragging(true);
+    
+    // If it's a touch event, immediately handle the drag with the initial touch position
+    if ('touches' in e && e.touches[0]) {
+      handleDrag(e.touches[0].clientY);
+    } else if ('clientY' in e) {
+      handleDrag(e.clientY);
+    }
   };
 
   // Handle mouse/touch move for dragging
@@ -118,6 +138,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   // Handle mouse move
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
+      e.preventDefault();
       handleDrag(e.clientY);
     };
     
@@ -126,7 +147,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     };
     
     if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mousemove', handleMouseMove, { passive: false });
       window.addEventListener('mouseup', handleMouseUp);
     }
     
@@ -139,6 +160,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   // Handle touch move
   useEffect(() => {
     const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
       if (e.touches[0]) {
         handleDrag(e.touches[0].clientY);
       }
@@ -149,7 +171,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
     };
     
     if (isDragging) {
-      window.addEventListener('touchmove', handleTouchMove);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
       window.addEventListener('touchend', handleTouchEnd);
     }
     
@@ -177,11 +199,16 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   return (
     <div 
       ref={buttonRef}
-      className={`relative w-full aspect-square ${className}`}
+      className={`relative mx-auto ${className}`}
+      style={{ 
+        aspectRatio: '1/1',
+        height: collapsedHeight,
+        width: collapsedHeight,
+      }}
     >
       {/* Expanded slider container - this is the continuous background that grows from the button */}
       <div 
-        className={`absolute left-0 right-0 bottom-0 transition-all duration-300 ease-in-out 
+        className={`absolute left-1/2 bottom-0 -translate-x-1/2 transition-all duration-300 ease-in-out 
           rounded-xl overflow-visible
           bg-gradient-to-b ${value > 0 ? 'from-gray-200/40 to-gray-300/40' : 'from-gray-200/20 to-gray-300/20'} 
           border ${value > 0 ? 'border-gray-400/20' : 'border-gray-400/10'}
@@ -189,17 +216,22 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
           shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]`}
         style={{ 
           width: '100%',
-          height: isExpanded ? expandedHeight : '100%',
+          height: isExpanded ? expandedHeight : collapsedHeight,
           zIndex: isExpanded ? 9999 : 1,
+          transform: 'translateX(-50%)',
+          opacity: 1,
         }}
         ref={sliderRef}
+        onClick={handleClick}
+        onMouseDown={isExpanded ? handleDragStart : undefined}
+        onTouchStart={isExpanded ? handleDragStart : undefined}
       >
         {/* Fill area - covers the bottom portion up to the current value */}
         {isExpanded && (
           <div 
             className={`absolute inset-x-0 bottom-0 rounded-xl
               bg-gradient-to-t from-${activeColor}/60 to-${activeColor}/30
-              transition-height duration-150`}
+              transition-height duration-150 pointer-events-none`}
             style={{ 
               height: `${((value - min) / (max - min)) * (expandedHeight)}px`,
               zIndex: 1,
@@ -225,19 +257,17 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
 
         {/* Button/handle at bottom - draggable when expanded */}
         <div 
-          className={`absolute bottom-0 left-0 right-0 h-full flex flex-col items-center justify-center
+          className={`absolute bottom-0 left-0 right-0 flex flex-col items-center justify-center
             rounded-xl transition-colors duration-200 cursor-pointer
             ${isExpanded ? 'rounded-b-xl' : 'rounded-xl'}
             border-t ${isExpanded ? 'border-t-gray-400/30' : 'border-t-transparent'}`}
           style={{ 
-            height: isExpanded ? collapsedHeight : '100%',
+            height: collapsedHeight,
             zIndex: 20,
           }}
           onClick={handleClick}
-          onMouseDown={isExpanded ? handleDragStart : undefined}
-          onTouchStart={isExpanded ? handleDragStart : undefined}
         >
-          <div className="flex flex-col items-center justify-evenly h-full w-full py-3 px-3">
+          <div className="flex flex-col items-center justify-evenly h-full py-2 px-1">
             {/* Icon and labels */}
             {Icon && <Icon size={24} className={`transition-colors ${getActiveTextColor()}`} />}
             
