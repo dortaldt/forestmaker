@@ -14,6 +14,7 @@ interface ExpandableSliderProps {
   icon?: IconType;
   label?: string;
   activeColor?: string;
+  themeColor?: string; // Theme main color based on background image average
   id?: string; // Add ID for tracking active slider
 }
 
@@ -30,6 +31,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   icon: Icon,
   label,
   activeColor = 'blue-600',
+  themeColor = '#f97316', // Default to orange if no theme color provided
   id = 'slider-' + Math.random().toString(36).substring(2, 9), // Generate a random ID if none provided
 }) => {
   const [value, setValue] = useState(initialValue);
@@ -208,16 +210,23 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
   // Get the appropriate color classes based on component state and value
   const getActiveTextColor = () => {
     if (disabled) return 'text-gray-400';
-    return value > 0 ? 'text-orange-500' : 'text-gray-400';
+    return value > 0 ? 'text-theme-color' : 'text-gray-400';
   };
   
+  // Get the style for themed elements
+  const getThemeColorStyle = () => {
+    return value > 0 ? { color: themeColor } : {};
+  };
+
   // Determine which color LED indicator to show
   const getLedColor = () => {
     if (disabled) return 'bg-gray-300';
     if (value <= 0) return 'bg-gray-400';
-    if (value <= 33) return 'bg-green-500';
-    if (value <= 66) return 'bg-yellow-500';
-    return 'bg-red-500';
+    
+    // Use the theme color with different opacities based on value
+    const opacity = Math.min(0.6 + (value / max) * 0.4, 1);
+    const opacityPercent = Math.round(opacity * 100);
+    return `bg-[${themeColor}${opacityPercent}]`;
   };
 
   return (
@@ -234,8 +243,6 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
       <div 
         className={`absolute left-1/2 bottom-0 -translate-x-1/2 transition-all duration-300 ease-in-out 
           rounded-xl overflow-visible
-          bg-gradient-to-b ${value > 0 ? 'from-gray-200/40 to-gray-300/40' : 'from-gray-200/20 to-gray-300/20'} 
-          border ${value > 0 ? 'border-gray-400/20' : 'border-gray-400/10'}
           backdrop-filter ${value > 0 ? 'backdrop-blur-[2px]' : 'backdrop-blur-[3px]'}
           shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]`}
         style={{ 
@@ -245,6 +252,12 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
           transform: 'translateX(-50%)',
           opacity: 1,
           borderRadius: '0.75rem',
+          background: value > 0 
+            ? `linear-gradient(to bottom, ${themeColor}20, ${themeColor}30)` 
+            : `linear-gradient(to bottom, rgba(229, 231, 235, 0.2), rgba(209, 213, 219, 0.2))`,
+          border: value > 0 
+            ? `1px solid ${themeColor}40` 
+            : '1px solid rgba(156, 163, 175, 0.1)'
         }}
         ref={sliderRef}
         onClick={handleClick}
@@ -260,7 +273,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
               background: 'transparent',
               border: '2px solid transparent',
               backgroundImage: `conic-gradient(
-                #f97316 0deg ${(value / max) * 360}deg,
+                ${themeColor} 0deg ${(value / max) * 360}deg,
                 rgba(255, 255, 255, 0.5) ${(value / max) * 360}deg 360deg
               )`,
               backgroundOrigin: 'border-box',
@@ -283,12 +296,12 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
           <div 
             className={`absolute inset-x-0 bottom-0
               rounded-xl
-              bg-gradient-to-t from-orange-600 to-orange-400
               transition-all duration-100 ease-out pointer-events-none
               shadow-[0_0_10px_rgba(0,0,0,0.15)]`}
             style={{ 
               height: `${((value - min) / (max - min)) * expandedHeight}px`,
               maxHeight: `${expandedHeight}px`,
+              background: `linear-gradient(to top, ${themeColor}, ${themeColor}CC)`,
               zIndex: 10,
               willChange: 'height, transform',
               transform: isDragging ? 'scale(1.005)' : 'scale(1)',
@@ -306,9 +319,18 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
                 key={`mark-${i}`} 
                 className="w-full flex items-center"
               >
-                <div className="w-2 h-0.5 bg-white/40"></div>
-                <div className="flex-grow h-[1.5px] bg-white/30"></div>
-                <div className="w-2 h-0.5 bg-white/40"></div>
+                <div 
+                  className="w-2 h-0.5"
+                  style={{ backgroundColor: `${themeColor}60` }}
+                ></div>
+                <div 
+                  className="flex-grow h-[1.5px]"
+                  style={{ backgroundColor: `${themeColor}40` }}
+                ></div>
+                <div 
+                  className="w-2 h-0.5"
+                  style={{ backgroundColor: `${themeColor}60` }}
+                ></div>
               </div>
             ))}
           </div>
@@ -329,7 +351,7 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
         >
           <div className="flex flex-col items-center justify-evenly h-full py-2 px-1">
             {/* Icon and label */}
-            {Icon && <Icon size={24} className={`transition-colors ${getActiveTextColor()}`} />}
+            {Icon && <Icon size={24} className={`transition-colors ${getActiveTextColor()}`} style={getThemeColorStyle()} />}
             
             <div className="flex flex-col items-center">
               {label && <span className="text-[10px] font-medium text-gray-700">{label}</span>}
@@ -340,6 +362,35 @@ const ExpandableSlider: React.FC<ExpandableSliderProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Mute button - floating above the slider with glass effect */}
+      {isExpanded && value > 0 && (
+        <div 
+          className="w-10 h-10 rounded-full 
+                   flex items-center justify-center cursor-pointer
+                   border border-white/20 
+                   hover:scale-105 active:scale-95 transition-transform duration-150"
+          style={{
+            position: 'absolute',
+            top: `-172px`,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999,
+            background: 'rgba(255, 255, 255, 0.15)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.3)'
+          }}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent triggering parent click events
+            setValue(0);
+            setIsExpanded(false);
+            onChange?.(0); // Notify parent component
+          }}
+        >
+          <TbVolumeOff size={18} style={{ color: themeColor }} />
+        </div>
+      )}
     </div>
   );
 };

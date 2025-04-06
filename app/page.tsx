@@ -10,6 +10,7 @@ import { Forest, forests } from './data/forests';
 import Image from 'next/image';
 import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbDeer, TbFlame, TbMoodSmile, TbPray, TbPictureInPicture, TbPictureInPictureOff, TbBrandSpotify } from 'react-icons/tb';
 import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from './utils/env';
+import { extractAverageColor, getDarkerColor, getLighterColor } from './utils/colorExtractor';
 
 const soundIcons = {
   wind: TbWind,
@@ -141,6 +142,7 @@ export default function Home() {
   const pipPlayerRef = useRef<PiPMiniPlayerHandle>(null);
   const [soundLevels, setSoundLevels] = useState<Record<SoundType, number>>({} as Record<SoundType, number>);
   const [isSpotifyVisible, setIsSpotifyVisible] = useState(false);
+  const [imageAverageColor, setImageAverageColor] = useState<string>('#808080');
 
   // Preload forest images
   useEffect(() => {
@@ -180,6 +182,20 @@ export default function Home() {
           setPreviousImage(currentForest.imageUrl);
         }, 1000);
       };
+    }
+  }, [currentForest?.imageUrl]);
+
+  // Extract average color from the forest image when it changes
+  useEffect(() => {
+    if (currentForest?.imageUrl) {
+      extractAverageColor(currentForest.imageUrl)
+        .then((color: string) => {
+          console.log(`Extracted color for ${currentForest.name}: ${color}`);
+          setImageAverageColor(color);
+        })
+        .catch((error: Error) => {
+          console.error('Failed to extract color:', error);
+        });
     }
   }, [currentForest?.imageUrl]);
 
@@ -330,10 +346,15 @@ export default function Home() {
       <div className="relative h-full flex flex-col items-center justify-center z-10">
         <div className="device-container w-full sm:max-w-md h-full sm:h-auto mx-auto my-auto">
           {/* Device Frame - now themed based on forest */}
-          <div className={`device-frame rounded-3xl sm:rounded-3xl overflow-hidden shadow-xl pt-3 pb-3
-                         ${getDeviceFrameStyle(currentForest?.id).outer}
-                         h-full sm:h-auto border-2 transition-colors duration-700 relative
-                         flex flex-col shadow-[0_6px_20px_rgba(0,0,0,0.15),inset_0_1px_3px_rgba(255,255,255,0.6)]`}>
+          <div 
+            className={`device-frame rounded-3xl sm:rounded-3xl overflow-hidden shadow-xl pt-3 pb-3
+                     h-full sm:h-auto border-2 transition-colors duration-700 relative
+                     flex flex-col shadow-[0_6px_20px_rgba(0,0,0,0.15),inset_0_1px_3px_rgba(255,255,255,0.6)]`}
+            style={{
+              background: `linear-gradient(to bottom, ${imageAverageColor}, ${getDarkerColor(imageAverageColor, 0.3)})`,
+              borderColor: getDarkerColor(imageAverageColor, 0.1)
+            }}
+          >
             
             {/* Plastic shine effect */}
             <div className="absolute inset-0 z-0 pointer-events-none">
@@ -403,11 +424,16 @@ export default function Home() {
             </div>
             
             {/* Controls Panel */}
-            <div className={`equalizer-container relative z-10 mt-0 sm:mt-4 mb-auto sm:mb-0 pt-3 pb-4 px-4 rounded-xl mx-4
-                          bg-gradient-to-b ${getDeviceFrameStyle(currentForest?.id).inner} to-white/90
+            <div 
+              className={`equalizer-container relative z-10 mt-0 sm:mt-4 mb-auto sm:mb-0 pt-3 pb-4 px-4 rounded-xl mx-4
                           border border-white/40 
                           shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.1)]
-                          transition-colors duration-700`}>
+                          transition-colors duration-700`}
+              style={{
+                background: `linear-gradient(to bottom, ${getLighterColor(imageAverageColor, 0.85)}, ${getLighterColor(imageAverageColor, 0.7)}, rgba(255,255,255,0.9))`,
+                borderColor: `${getLighterColor(imageAverageColor, 0.6)}40`
+              }}
+            >
               {/* Fixed header with app title and controls */}
               <div className="w-full flex justify-between items-center pb-2 mb-1 z-20 border-b border-gray-200/50">
                 {/* App Title */}
