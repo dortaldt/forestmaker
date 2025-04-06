@@ -23,7 +23,7 @@ export function IconButton({
   ...rest
 }: IconButtonProps) {
   // Base classes with modern glass-like styling
-  const baseClasses = 'flex items-center justify-center transition-all duration-200 rounded-xl overflow-hidden backdrop-filter backdrop-blur-[2px] shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]';
+  const baseClasses = 'flex items-center justify-center transition-all duration-200 rounded-full overflow-hidden backdrop-filter backdrop-blur-[2px] shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]';
   
   // Modern gradient variant classes
   const variantClasses = {
@@ -32,21 +32,21 @@ export function IconButton({
     ghost: 'bg-gradient-to-b from-gray-200/20 to-gray-300/20 border border-gray-400/10 text-gray-600'
   };
   
-  // Size classes remain the same
+  // Size classes with Apple-like proportions
   const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-10 h-10',
-    lg: 'w-12 h-12'
+    sm: 'w-9 h-9',
+    md: 'w-11 h-11',
+    lg: 'w-13 h-13'
   };
   
   const iconSizes = {
-    sm: 16,
-    md: 20,
-    lg: 24
+    sm: 18,
+    md: 22,
+    lg: 26
   };
   
   // Updated disabled state with opacity and blur effect
-  const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed backdrop-blur-[3px]' : 'cursor-pointer hover:shadow-md active:shadow-inner';
+  const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed backdrop-blur-[3px]' : 'cursor-pointer hover:shadow-md active:shadow-inner active:scale-95 transition-transform duration-150';
   
   const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${disabledClasses}`;
   

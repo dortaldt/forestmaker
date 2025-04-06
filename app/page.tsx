@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import SoundEqualizer from './components/SoundEqualizer';
 import ForestMatch from './components/ForestMatch';
 import PiPMiniPlayer, { PiPMiniPlayerHandle } from './components/PiPMiniPlayer';
@@ -170,6 +170,8 @@ export default function Home() {
   const [previousColor, setPreviousColor] = useState<string>('#808080');
   const [displayColor, setDisplayColor] = useState<string>('#808080');
   const [textAnimationKey, setTextAnimationKey] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Preload forest images
   useEffect(() => {
@@ -436,70 +438,91 @@ export default function Home() {
         ></div>
       </div>
 
-      {/* Device Container - with improved transition */}
+      {/* Device Container - with 3D effects without tilting */}
       <div className="relative h-full flex flex-col items-center justify-center z-10">
         <div 
-          className="device-container w-full sm:max-w-md md:max-w-lg h-full sm:h-auto mx-auto my-auto transition-all duration-2000 ease-out-expo"
+          className="device-container w-full sm:max-w-md md:max-w-lg h-full sm:h-auto mx-auto my-auto transition-all duration-2000 ease-out-expo group"
           style={{ 
             filter: `drop-shadow(0 0 20px ${displayColor}60)`,
             transform: isTransitioning ? 'scale(0.98)' : 'scale(1)'
           }}
         >
-          {/* Device Frame - now themed based on forest */}
+          {/* Device Frame - now themed based on forest with 3D effects */}
           <div 
             className={`device-frame rounded-3xl sm:rounded-3xl overflow-hidden shadow-xl pt-3 pb-3
                      h-full sm:h-auto border-2 transition-colors duration-700 relative
                      flex flex-col shadow-[0_6px_20px_rgba(0,0,0,0.15),inset_0_1px_3px_rgba(255,255,255,0.6)]`}
             style={{
-              background: `linear-gradient(to bottom, ${displayColor}, ${getDarkerColor(displayColor, 0.4)})`,
-              borderColor: getDarkerColor(displayColor, 0.15),
+              background: `linear-gradient(to bottom, ${displayColor}30, ${getDarkerColor(displayColor, 0.4)}30)`,
+              borderColor: `${getDarkerColor(displayColor, 0.15)}60`,
               borderWidth: '2px',
+              backdropFilter: 'blur(5px)',
               transition: 'background 2s ease-out, border-color 2s ease-out, box-shadow 2s ease-out'
             }}
           >
             
-            {/* Plastic shine effect - enhanced to better show the color */}
+            {/* Enhanced 3D plastic shine effect */}
+            <div className="plastic-shine"></div>
+            
+            {/* Original plastic shine effect layers - kept for compatibility */}
             <div className="absolute inset-0 z-0 pointer-events-none">
-              <div className="absolute inset-x-0 top-0 h-[15%] bg-gradient-to-b from-white/30 to-transparent"></div>
+              <div className="absolute inset-x-0 top-0 h-[15%] bg-gradient-to-b from-white/20 to-transparent"></div>
               <div className="absolute left-0 right-0 top-[15%] h-[10%] bg-gradient-to-b from-transparent via-white/5 to-transparent"></div>
-              <div className="absolute right-0 bottom-[40%] w-[10%] h-[40%] bg-gradient-to-l from-white/20 to-transparent"></div>
-              <div className="absolute left-[5%] top-[30%] w-[15%] h-[5%] bg-radial-gradient rounded-full opacity-20"></div>
+              <div className="absolute right-0 bottom-[40%] w-[10%] h-[40%] bg-gradient-to-l from-white/10 to-transparent"></div>
+              <div className="absolute left-[5%] top-[30%] w-[15%] h-[5%] bg-radial-gradient rounded-full opacity-10"></div>
             </div>
             
-            {/* Device Screen - Enhanced skeuomorphic design with theme colors */}
+            {/* Device Screen - Enhanced skeuomorphic design with theme colors and 3D effects */}
             <div className="device-screen relative rounded-xl overflow-hidden mx-4 mb-4 z-10
                          flex-grow sm:flex-grow-0 sm:h-56 md:h-64 lg:h-72
-                         shadow-[inset_0_0_10px_rgba(0,0,0,0.2),0_2px_3px_rgba(0,0,0,0.1)]"
+                         shadow-[inset_0_0_10px_rgba(0,0,0,0.1),0_2px_3px_rgba(0,0,0,0.05)]"
                 style={{
-                  border: `3px solid ${getDarkerColor(displayColor, 0.25)}50`,
-                  boxShadow: `inset 0 0 10px rgba(0,0,0,0.2), 0 2px 5px ${getDarkerColor(displayColor, 0.2)}50`
+                  border: `3px solid ${getDarkerColor(displayColor, 0.25)}30`,
+                  boxShadow: `inset 0 0 10px rgba(0,0,0,0.1), 0 2px 5px ${getDarkerColor(displayColor, 0.2)}30`,
+                  backdropFilter: 'blur(3px)'
                 }}
             >
-              {/* Screen content - forest image */}
-              <div className="absolute inset-0">
-                <Image
-                  src={currentForest?.imageUrl || '/assets/images/forest1.png'}
-                  alt={currentForest?.name || 'Default Forest'}
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="100vw"
-                  quality={90}
-                />
-                {/* Screen glare effect */}
+              {/* New 3D screen depth layers */}
+              <div className="screen-bezel"></div>
+              <div className="screen-layer"></div>
+              
+              {/* Screen content - forest image with static 3D layering */}
+              <div className="absolute inset-0 z-1" 
+                   style={{ 
+                     transform: 'translateZ(1px)',
+                     transformStyle: 'preserve-3d'
+                   }}>
+                <div className="relative w-full h-full">
+                  <div className="absolute inset-0">
+                    <Image
+                      src={currentForest?.imageUrl || '/assets/images/forest1.png'}
+                      alt={currentForest?.name || 'Default Forest'}
+                      fill
+                      priority
+                      className="object-cover"
+                      sizes="100vw"
+                      quality={90}
+                    />
+                  </div>
+                  
+                  {/* Static shadow overlay for depth effect */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/15 pointer-events-none"></div>
+                </div>
+                
+                {/* Enhanced Screen glare effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5 pointer-events-none"></div>
               </div>
               
               {/* Screen texture - subtle scanlines and noise */}
               <div className="screen-texture absolute inset-0 pointer-events-none
-                           bg-[linear-gradient(transparent_50%,rgba(0,0,0,.02)_50%)] bg-[length:100%_2px]"></div>
+                           bg-[linear-gradient(transparent_50%,rgba(0,0,0,.01)_50%)] bg-[length:100%_2px]"></div>
               
               {/* Screen inner shadow with theme color */}
               <div className="screen-inner-shadow absolute inset-0 pointer-events-none"
                    style={{
-                     boxShadow: `inset 0 0 15px rgba(0,0,0,0.3), 
-                                inset 0 0 3px rgba(0,0,0,0.5), 
-                                inset 0 0 20px ${getDarkerColor(displayColor, 0.2)}30`
+                     boxShadow: `inset 0 0 15px rgba(0,0,0,0.1), 
+                                inset 0 0 3px rgba(0,0,0,0.2), 
+                                inset 0 0 20px ${getDarkerColor(displayColor, 0.2)}20`
                    }}
               ></div>
               
@@ -508,7 +531,7 @@ export default function Home() {
                 <div className="absolute inset-0 flex flex-col justify-between">
                   {/* Top area for forest info - animate with delay */}
                   <div 
-                    className="p-3 bg-gradient-to-b from-black/40 to-transparent transition-opacity duration-700 ease-out"
+                    className="p-4 bg-gradient-to-b from-black/40 to-transparent transition-opacity duration-700 ease-out"
                     style={{ 
                       opacity: isTransitioning ? 0 : 1,
                       transitionDelay: '300ms'
@@ -652,7 +675,7 @@ export default function Home() {
                 hasInteracted && imagesLoaded && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div 
-                      className="backdrop-blur-[2px] rounded-xl px-4 py-3 max-w-xs border
+                      className="backdrop-blur-[2px] rounded-2xl px-5 py-4 max-w-xs border
                                shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]"
                       style={{
                         background: `linear-gradient(to bottom, ${getLighterColor(displayColor, 0.9)}70, ${getLighterColor(displayColor, 0.8)}80)`,
@@ -660,7 +683,7 @@ export default function Home() {
                       }}
                     >
                       <h2 
-                        className="text-lg font-bold mb-1"
+                        className="text-lg font-bold mb-2"
                         style={{ color: getDarkerColor(displayColor, 0.3) }}
                       >
                         Welcome to Forest Maker
@@ -679,17 +702,18 @@ export default function Home() {
             
             {/* Controls Panel - more prominent colors */}
             <div 
-              className={`equalizer-container relative z-10 mt-0 sm:mt-4 mb-auto sm:mb-0 pt-3 pb-4 px-4 rounded-xl mx-4
-                          border shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.1)]
+              className={`equalizer-container relative z-10 mt-0 sm:mt-6 mb-auto sm:mb-0 pt-4 pb-5 px-5 rounded-2xl mx-5
+                          border shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_1px_3px_rgba(0,0,0,0.05)]
                           transition-colors duration-700`}
               style={{
-                background: `linear-gradient(to bottom, ${getLighterColor(displayColor, 0.7)}, ${getLighterColor(displayColor, 0.5)}, ${getLighterColor(displayColor, 0.3)})`,
-                borderColor: `${getLighterColor(displayColor, 0.4)}70`,
-                borderWidth: '1px'
+                background: `linear-gradient(to bottom, ${getLighterColor(displayColor, 0.7)}30, ${getLighterColor(displayColor, 0.5)}30, ${getLighterColor(displayColor, 0.3)}30)`,
+                borderColor: `${getLighterColor(displayColor, 0.4)}40`,
+                borderWidth: '1px',
+                backdropFilter: 'blur(8px)'
               }}
             >
               {/* Fixed header with app title and controls */}
-              <div className="w-full flex justify-between items-center pb-2 mb-1 z-20 border-b border-gray-200/50">
+              <div className="w-full flex justify-between items-center pb-3 mb-2 z-20 border-b border-gray-200/30">
                 {/* App Title */}
                 <div>
                   <h1 className="text-sm font-bold tracking-tight engraved-text">
@@ -698,10 +722,10 @@ export default function Home() {
                 </div>
                 
                 {/* Control buttons */}
-                <div className="flex space-x-2">
+                <div className="flex space-x-3">
                   <button
                     onClick={togglePiP}
-                    className="mode-button p-1 rounded-full"
+                    className="mode-button p-1.5 rounded-full"
                     aria-label={isPiPVisible ? "Close PiP mode" : "Open PiP mode"}
                     style={{ color: getDarkerColor(displayColor, 0.3) }}
                   >
@@ -710,7 +734,7 @@ export default function Home() {
                   
                   <button
                     onClick={() => setIsSpotifyVisible(!isSpotifyVisible)}
-                    className={`mode-button p-1 rounded-full ${isSpotifyVisible ? 'active' : ''}`}
+                    className={`mode-button p-1.5 rounded-full ${isSpotifyVisible ? 'active' : ''}`}
                     aria-label={isSpotifyVisible ? "Hide Spotify" : "Show Spotify"}
                   >
                     <TbBrandSpotify className={isSpotifyVisible ? 'text-green-700' : ''} style={!isSpotifyVisible ? { color: getDarkerColor(displayColor, 0.3) } : {}} size={18} />
@@ -720,33 +744,6 @@ export default function Home() {
               
               {/* Sound Equalizer */}
               <SoundEqualizer onSoundChange={handleSoundChange} />
-              
-              {/* Mode buttons - themed colors */}
-              <div className="flex justify-center mt-4 space-x-3">
-                <button 
-                  className="mode-button active text-xs font-medium px-4 py-1 rounded-full engraved-text" 
-                  style={{ 
-                    backgroundColor: getLighterColor(displayColor, 0.8),
-                    borderColor: getDarkerColor(displayColor, 0.1),
-                    color: getDarkerColor(displayColor, 0.4),
-                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                >
-                  Fast
-                </button>
-                <button 
-                  className="mode-button text-xs font-medium px-4 py-1 rounded-full engraved-text" 
-                  style={{ color: getDarkerColor(displayColor, 0.2) }}
-                >
-                  Slow
-                </button>
-                <button 
-                  className="mode-button text-xs font-medium px-4 py-1 rounded-full engraved-text" 
-                  style={{ color: getDarkerColor(displayColor, 0.2) }}
-                >
-                  Auto
-                </button>
-              </div>
             </div>
           </div>
         </div>
@@ -764,8 +761,16 @@ export default function Home() {
         
         {/* Spotify Integration */}
         {isSpotifyVisible && (
-          <div className="absolute bottom-4 left-0 right-0 z-20 px-4">
-            <div className="device-frame p-3 rounded-xl mx-auto max-w-md">
+          <div className="absolute bottom-5 left-0 right-0 z-20 px-5">
+            <div className="device-frame p-4 rounded-2xl mx-auto max-w-md"
+              style={{
+                background: `linear-gradient(to bottom, ${displayColor}30, ${getDarkerColor(displayColor, 0.4)}30)`,
+                borderColor: `${getDarkerColor(displayColor, 0.15)}60`,
+                borderWidth: '1px',
+                backdropFilter: 'blur(5px)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+              }}
+            >
               <SpotifyIntegration 
                 clientId={SPOTIFY_CLIENT_ID} 
                 clientSecret={SPOTIFY_CLIENT_SECRET}

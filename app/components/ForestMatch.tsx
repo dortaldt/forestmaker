@@ -68,11 +68,11 @@ export default function ForestMatch({ forest }: ForestMatchProps) {
   return (
     <div className="text-left w-full">
       {/* Forest vibes displayed as elegant tags */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {forest.vibe.split(',').map((word, index) => (
           <span
             key={index}
-            className={`px-2 py-0.5 rounded-md text-xs
+            className={`px-3 py-1 rounded-full text-xs
                      backdrop-blur-[4px] border 
                      ${getVibeTagStyle(forest.id)}
                      shadow-[0_1px_2px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.2)]`}
@@ -87,7 +87,7 @@ export default function ForestMatch({ forest }: ForestMatchProps) {
       
       {/* Location with subtle styling */}
       <p 
-        className="text-xs text-white/90 mt-2 font-medium tracking-wide"
+        className="text-xs text-white/90 mt-3 font-medium tracking-wide"
         style={{
           textShadow: '0 1px 2px rgba(0,0,0,0.5)'
         }}

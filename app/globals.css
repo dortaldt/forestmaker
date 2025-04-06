@@ -276,7 +276,11 @@ input[type="range"]:active::-moz-range-thumb {
   max-width: 400px;
   box-shadow: 
     0 20px 50px rgba(0, 0, 0, 0.3),
-    0 10px 30px rgba(0, 0, 0, 0.2);
+    0 10px 30px rgba(0, 0, 0, 0.2),
+    0 30px 70px rgba(0, 0, 0, 0.1),
+    0 2px 10px rgba(0, 0, 0, 0.2);
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 
 /* Device frame */
@@ -285,6 +289,44 @@ input[type="range"]:active::-moz-range-thumb {
   border: 1px solid rgba(180, 180, 180, 0.7);
   border-radius: 24px;
   overflow: hidden;
+  transform-style: preserve-3d;
+  position: relative;
+  box-shadow: 
+    0 4px 15px rgba(0, 0, 0, 0.15),
+    0 8px 25px rgba(0, 0, 0, 0.1),
+    inset 0 1px 3px rgba(255, 255, 255, 0.7);
+}
+
+/* 3D device frame edge */
+.device-frame::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 100%);
+  z-index: -1;
+  transform: translateZ(-1px);
+  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  pointer-events: none;
+}
+
+/* 3D device bottom edge */
+.device-frame::after {
+  content: '';
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: -4px;
+  height: 4px;
+  border-radius: 0 0 10px 10px;
+  background: rgba(0,0,0,0.1);
+  filter: blur(2px);
+  z-index: -2;
+  transform: translateZ(-3px);
+  pointer-events: none;
 }
 
 /* Power button */
@@ -298,10 +340,23 @@ input[type="range"]:active::-moz-range-thumb {
     0 1px 3px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 1.0);
   transition: all 0.2s ease;
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.power-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  opacity: 0.7;
+  transform: translateZ(-1px);
+  pointer-events: none;
 }
 
 .power-button:active {
-  transform: scale(0.95);
+  transform: scale(0.95) translateZ(-1px);
   box-shadow: 
     0 0px 1px rgba(0, 0, 0, 0.1),
     inset 0 1px 1px rgba(0, 0, 0, 0.1);
@@ -312,7 +367,73 @@ input[type="range"]:active::-moz-range-thumb {
   background-color: #222;
   box-shadow: 
     inset 0 2px 5px rgba(0, 0, 0, 0.5),
+    inset 0 0 10px rgba(0, 0, 0, 0.2),
     0 1px 0 rgba(255, 255, 255, 0.8);
+  transform-style: preserve-3d;
+  transform: translateZ(2px);
+  position: relative;
+}
+
+.device-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 40%, rgba(0,0,0,0.03) 100%);
+  border-radius: inherit;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.device-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 
+    inset 0 0 15px rgba(0,0,0,0.3),
+    0 0 1px rgba(255,255,255,0.5);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 3D screen layer - adds depth to the screen */
+.screen-layer {
+  position: absolute;
+  inset: 0;
+  transform: translateZ(-2px);
+  background: rgba(0,0,0,0.8);
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 3D screen bezel - simulates screen glass edge */
+.screen-bezel {
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(45deg, rgba(120,120,120,0.2) 0%, rgba(50,50,50,0.2) 100%);
+  border-radius: inherit;
+  z-index: 0;
+  transform: translateZ(1px);
+  pointer-events: none;
+  box-shadow: inset 0 0 2px rgba(255,255,255,0.1);
+}
+
+/* Plastic shine effect enhancement */
+.plastic-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.15) 0%,
+    rgba(255,255,255,0) 50%,
+    rgba(255,255,255,0.05) 100%
+  );
+  border-radius: inherit;
+  z-index: 2;
+  pointer-events: none;
+  transform: translateZ(3px);
 }
 
 /* Equalizer container */
@@ -515,7 +636,7 @@ input[type="range"]:active::-moz-range-thumb {
 
 /* High-performance animation hints */
 .will-change-all {
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
 }
 
 /* Cross-fade animation */
