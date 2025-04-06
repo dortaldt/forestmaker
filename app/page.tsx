@@ -12,6 +12,30 @@ import { TbWind, TbDroplet, TbFeather, TbCloudStorm, TbDropletFilled, TbBug, TbD
 import { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from './utils/env';
 import { extractAverageColor, getDarkerColor, getLighterColor } from './utils/colorExtractor';
 
+// Helper for smooth color transitions
+const interpolateColor = (color1: string, color2: string, factor: number = 0.5): string => {
+  // Remove the # if present
+  color1 = color1.replace('#', '');
+  color2 = color2.replace('#', '');
+  
+  // Parse the colors
+  const r1 = parseInt(color1.substring(0, 2), 16);
+  const g1 = parseInt(color1.substring(2, 4), 16);
+  const b1 = parseInt(color1.substring(4, 6), 16);
+  
+  const r2 = parseInt(color2.substring(0, 2), 16);
+  const g2 = parseInt(color2.substring(2, 4), 16);
+  const b2 = parseInt(color2.substring(4, 6), 16);
+  
+  // Interpolate
+  const r = Math.round(r1 + factor * (r2 - r1));
+  const g = Math.round(g1 + factor * (g2 - g1));
+  const b = Math.round(b1 + factor * (b2 - b1));
+  
+  // Convert back to hex
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
+
 const soundIcons = {
   wind: TbWind,
   rain: TbDroplet,
@@ -143,6 +167,9 @@ export default function Home() {
   const [soundLevels, setSoundLevels] = useState<Record<SoundType, number>>({} as Record<SoundType, number>);
   const [isSpotifyVisible, setIsSpotifyVisible] = useState(false);
   const [imageAverageColor, setImageAverageColor] = useState<string>('#808080');
+  const [previousColor, setPreviousColor] = useState<string>('#808080');
+  const [displayColor, setDisplayColor] = useState<string>('#808080');
+  const [textAnimationKey, setTextAnimationKey] = useState(0);
 
   // Preload forest images
   useEffect(() => {
@@ -176,11 +203,13 @@ export default function Home() {
         setNextImageLoaded(true);
         // Start transition only after image is loaded
         setIsTransitioning(true);
+        // Reset text animation key to trigger fresh animations
+        setTextAnimationKey(prev => prev + 1);
         setTimeout(() => {
           setIsTransitioning(false);
           // Update previous image to match current after transition
           setPreviousImage(currentForest.imageUrl);
-        }, 1000);
+        }, 2200); // Extended for smoother transition
       };
     }
   }, [currentForest?.imageUrl]);
@@ -198,6 +227,52 @@ export default function Home() {
         });
     }
   }, [currentForest?.imageUrl]);
+
+  // Handle smooth color transitions
+  useEffect(() => {
+    if (isTransitioning) {
+      // When transitioning starts, store current color
+      setPreviousColor(displayColor);
+    } else {
+      // When transition completes, update to new color
+      setDisplayColor(imageAverageColor);
+    }
+  }, [isTransitioning, imageAverageColor, displayColor]);
+
+  // Animate color transitions
+  useEffect(() => {
+    let animationFrame: number;
+    let startTime: number | null = null;
+    const duration = 2000; // Match duration with other transitions
+
+    const animateColor = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easing function for smoother transition
+      const easedProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+      
+      if (progress < 1) {
+        // Interpolate between previous and new color
+        const interpolated = interpolateColor(previousColor, imageAverageColor, easedProgress);
+        setDisplayColor(interpolated);
+        animationFrame = requestAnimationFrame(animateColor);
+      } else {
+        setDisplayColor(imageAverageColor);
+      }
+    };
+
+    if (isTransitioning && previousColor !== imageAverageColor) {
+      animationFrame = requestAnimationFrame(animateColor);
+    }
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [isTransitioning, previousColor, imageAverageColor]);
 
   const handleSoundChange = (activeSounds: SoundType[], levels?: Record<SoundType, number>) => {
     console.log('Page Sound Change:', {
@@ -305,11 +380,17 @@ export default function Home() {
     <main className="h-screen overflow-hidden relative">
       {/* Background image with transition - fixed to viewport */}
       <div className="fixed inset-0 z-0">
-        {/* Previous image */}
+        {/* Previous image - with smoother zoom out effect */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-            isTransitioning ? 'opacity-0' : 'opacity-100'
+          className={`absolute inset-0 transition-all duration-2500 ease-out-expo will-change-all ${
+            isTransitioning ? 'opacity-0 scale-[1.04] blur-[2px]' : 'opacity-100 scale-100 blur-0'
           }`}
+          style={{ 
+            animationName: isTransitioning ? 'cross-fade-out' : 'none',
+            animationDuration: '2500ms',
+            animationFillMode: 'forwards',
+            animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
         >
           <Image
             src={previousImage}
@@ -318,14 +399,20 @@ export default function Home() {
             priority
             className="object-cover"
             sizes="100vw"
-            quality={90}
+            quality={95}
           />
         </div>
-        {/* Current image */}
+        {/* Current image - with smoother zoom in effect */}
         <div 
-          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-            isTransitioning && nextImageLoaded ? 'opacity-100' : 'opacity-0'
+          className={`absolute inset-0 transition-all duration-3000 ease-out-expo will-change-all ${
+            isTransitioning && nextImageLoaded ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-[1.1] blur-[3px]'
           }`}
+          style={{ 
+            animationName: isTransitioning && nextImageLoaded ? 'cross-fade-in' : 'none',
+            animationDuration: '3000ms',
+            animationFillMode: 'forwards',
+            animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
         >
           <Image
             src={currentForest?.imageUrl || '/assets/images/forest1.png'}
@@ -334,20 +421,28 @@ export default function Home() {
             priority
             className="object-cover"
             sizes="100vw"
-            quality={90}
+            quality={95}
           />
         </div>
         
-        {/* Overlay gradient for better text contrast */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/50"></div>
+        {/* Overlay gradient with improved transition */}
+        <div 
+          className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/50 transition-all duration-2000 ease-out-expo"
+          style={{ 
+            opacity: isTransitioning ? 0.4 : 1,
+            filter: `saturate(${isTransitioning ? 1.2 : 1})`,
+            backdropFilter: `blur(${isTransitioning ? '1px' : '0px'})`
+          }}
+        ></div>
       </div>
 
-      {/* Device Container - New skeuomorphic container with color glow */}
+      {/* Device Container - with improved transition */}
       <div className="relative h-full flex flex-col items-center justify-center z-10">
         <div 
-          className="device-container w-full sm:max-w-md h-full sm:h-auto mx-auto my-auto"
+          className="device-container w-full sm:max-w-md md:max-w-lg h-full sm:h-auto mx-auto my-auto transition-all duration-2000 ease-out-expo"
           style={{ 
-            filter: `drop-shadow(0 0 20px ${imageAverageColor}60)`
+            filter: `drop-shadow(0 0 20px ${displayColor}60)`,
+            transform: isTransitioning ? 'scale(0.98)' : 'scale(1)'
           }}
         >
           {/* Device Frame - now themed based on forest */}
@@ -356,9 +451,10 @@ export default function Home() {
                      h-full sm:h-auto border-2 transition-colors duration-700 relative
                      flex flex-col shadow-[0_6px_20px_rgba(0,0,0,0.15),inset_0_1px_3px_rgba(255,255,255,0.6)]`}
             style={{
-              background: `linear-gradient(to bottom, ${imageAverageColor}, ${getDarkerColor(imageAverageColor, 0.4)})`,
-              borderColor: getDarkerColor(imageAverageColor, 0.15),
-              borderWidth: '2px'
+              background: `linear-gradient(to bottom, ${displayColor}, ${getDarkerColor(displayColor, 0.4)})`,
+              borderColor: getDarkerColor(displayColor, 0.15),
+              borderWidth: '2px',
+              transition: 'background 2s ease-out, border-color 2s ease-out, box-shadow 2s ease-out'
             }}
           >
             
@@ -370,138 +466,186 @@ export default function Home() {
               <div className="absolute left-[5%] top-[30%] w-[15%] h-[5%] bg-radial-gradient rounded-full opacity-20"></div>
             </div>
             
-            {/* Device Screen - Enhanced glass-like design with theme colors */}
-            <div 
-              className="device-screen relative rounded-xl overflow-hidden mx-4 mb-4 z-10
-                       flex-grow sm:flex-grow-0 sm:h-56 group hover:transform-gpu"
-              style={{
-                border: `3px solid ${getDarkerColor(imageAverageColor, 0.3)}80`,
-                boxShadow: `
-                  inset 0 0 10px rgba(0,0,0,0.3), 
-                  inset 0 0 2px rgba(255,255,255,0.2),
-                  0 2px 8px ${getDarkerColor(imageAverageColor, 0.3)}50,
-                  0 15px 20px -10px rgba(0,0,0,0.3)
-                `,
-                background: 'rgba(20,20,20,0.02)',
-                backdropFilter: 'blur(0.5px)',
-                isolation: 'isolate',
-                transition: 'transform 0.3s ease-out, box-shadow 0.3s ease-out',
-                transformStyle: 'preserve-3d'
-              }}
-              onMouseMove={(e) => {
-                if (typeof window !== 'undefined') {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = e.clientX - rect.left; // x position within the element
-                  const y = e.clientY - rect.top;  // y position within the element
-                  const centerX = rect.width / 2;
-                  const centerY = rect.height / 2;
-                  const tiltX = (y - centerY) / 30; // Calculate tilt angle
-                  const tiltY = -(x - centerX) / 30;
-                  
-                  e.currentTarget.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.01, 1.01, 1.01)`;
-                  
-                  // Update reflection angle to follow mouse
-                  const reflections = e.currentTarget.querySelectorAll('.glass-reflection');
-                  reflections.forEach((el: any) => {
-                    el.style.opacity = '0.7';
-                    el.style.transform = `translate(${tiltY * 10}px, ${tiltX * 10}px)`;
-                  });
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
-                const reflections = e.currentTarget.querySelectorAll('.glass-reflection');
-                reflections.forEach((el: any) => {
-                  el.style.opacity = '0.5';
-                  el.style.transform = 'translate(0px, 0px)';
-                });
-              }}
+            {/* Device Screen - Enhanced skeuomorphic design with theme colors */}
+            <div className="device-screen relative rounded-xl overflow-hidden mx-4 mb-4 z-10
+                         flex-grow sm:flex-grow-0 sm:h-56 md:h-64 lg:h-72
+                         shadow-[inset_0_0_10px_rgba(0,0,0,0.2),0_2px_3px_rgba(0,0,0,0.1)]"
+                style={{
+                  border: `3px solid ${getDarkerColor(displayColor, 0.25)}50`,
+                  boxShadow: `inset 0 0 10px rgba(0,0,0,0.2), 0 2px 5px ${getDarkerColor(displayColor, 0.2)}50`
+                }}
             >
-              {/* Screen glass depth effect with subtle parallax */}
-              <div className="absolute inset-0 bg-gradient-radial from-transparent to-black/5 opacity-40"></div>
-              
               {/* Screen content - forest image */}
-              <div className="absolute inset-0 backface-hidden"
-                   style={{ transform: 'translateZ(0)' }}>
+              <div className="absolute inset-0">
                 <Image
                   src={currentForest?.imageUrl || '/assets/images/forest1.png'}
                   alt={currentForest?.name || 'Default Forest'}
                   fill
                   priority
-                  className="object-cover screen-flicker"
+                  className="object-cover"
                   sizes="100vw"
                   quality={90}
                 />
+                {/* Screen glare effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5 pointer-events-none"></div>
               </div>
               
-              {/* Glass reflections - layered for more realism */}
-              <div className="absolute inset-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-70 glass-reflection"
-                   style={{ 
-                     opacity: 0.5,
-                     transition: 'transform 0.3s ease-out, opacity 0.3s ease-out'
-                   }}>
-                {/* Top highlight reflection */}
-                <div className="absolute inset-x-0 top-0 h-[30%] bg-gradient-to-b from-white/20 to-transparent transform -skew-y-3"></div>
-                
-                {/* Subtle side glare */}
-                <div className="absolute left-[3%] top-[5%] bottom-[5%] w-[15%] bg-gradient-to-r from-white/8 to-transparent rounded-full blur-[2px]"></div>
-                
-                {/* Bottom light refraction */}
-                <div className="absolute left-[10%] right-[10%] bottom-0 h-[15%] bg-gradient-to-t from-white/5 to-transparent"></div>
-                
-                {/* Angled highlight streak */}
-                <div className="absolute -right-[10%] top-[20%] w-[50%] h-[20%] bg-gradient-to-l from-white/15 to-transparent transform rotate-[25deg] blur-[1px]"></div>
-
-                {/* Subtle circular glare */}
-                <div className="absolute right-[15%] bottom-[25%] w-[30%] h-[20%] rounded-full radial-glare opacity-40"></div>
-              </div>
-              
-              {/* Glass texture - improved with scanlines and subtle noise */}
-              <div className="absolute inset-0 mix-blend-overlay opacity-30 pointer-events-none">
-                <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(120,120,120,.02)_50%)] bg-[length:100%_2px]"></div>
-                <div className="absolute inset-0" style={{ 
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
-                  backgroundBlendMode: 'soft-light',
-                  opacity: 0.03
-                }}></div>
-              </div>
-
-              {/* Chromatic aberration effect */}
-              <div className="absolute inset-0 pointer-events-none chromatic-aberration mix-blend-hard-light opacity-20"></div>
+              {/* Screen texture - subtle scanlines and noise */}
+              <div className="screen-texture absolute inset-0 pointer-events-none
+                           bg-[linear-gradient(transparent_50%,rgba(0,0,0,.02)_50%)] bg-[length:100%_2px]"></div>
               
               {/* Screen inner shadow with theme color */}
               <div className="screen-inner-shadow absolute inset-0 pointer-events-none"
                    style={{
-                     boxShadow: `
-                       inset 0 0 15px rgba(0,0,0,0.4), 
-                       inset 0 0 5px rgba(0,0,0,0.6),
-                       inset 0 0 30px ${getDarkerColor(imageAverageColor, 0.2)}40,
-                       inset 0 0 1px rgba(255,255,255,0.4)
-                     `
-                   }}
-              ></div>
-              
-              {/* Glass edge highlight */}
-              <div className="absolute inset-0 pointer-events-none rounded-xl"
-                   style={{
-                     border: '1px solid rgba(255,255,255,0.15)',
-                     boxShadow: 'inset 0 0 1px rgba(255,255,255,0.3)'
+                     boxShadow: `inset 0 0 15px rgba(0,0,0,0.3), 
+                                inset 0 0 3px rgba(0,0,0,0.5), 
+                                inset 0 0 20px ${getDarkerColor(displayColor, 0.2)}30`
                    }}
               ></div>
               
               {/* Forest information overlay - Integrated ForestMatch here */}
               {currentForest ? (
                 <div className="absolute inset-0 flex flex-col justify-between">
-                  {/* Top area for forest info */}
-                  <div className="p-3 bg-gradient-to-b from-black/40 to-transparent">
+                  {/* Top area for forest info - animate with delay */}
+                  <div 
+                    className="p-3 bg-gradient-to-b from-black/40 to-transparent transition-opacity duration-700 ease-out"
+                    style={{ 
+                      opacity: isTransitioning ? 0 : 1,
+                      transitionDelay: '300ms'
+                    }}
+                  >
                     <ForestMatch forest={currentForest} />
                   </div>
-                  {/* Bottom area for forest name */}
-                  <div className="p-2 bg-gradient-to-t from-black/70 to-transparent">
-                    <h2 className="text-sm font-semibold text-white tracking-wide"
-                       style={{ textShadow: '0 1px 2px rgba(0,0,0,0.7)' }}>
-                      {currentForest.name}
-                    </h2>
+                  
+                  {/* Album cover style forest name - large dramatic typography */}
+                  <div className="flex flex-col justify-end h-full overflow-hidden">
+                    {/* Dark gradient overlay for better text visibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none"></div>
+                    
+                    {/* Subtle noise texture overlay using CSS */}
+                    <div 
+                      className="absolute inset-0 opacity-5 mix-blend-overlay pointer-events-none"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'repeat',
+                        backgroundSize: '100px 100px'
+                      }}
+                    ></div>
+                    
+                    {/* Left accent bar - animated */}
+                    <div 
+                      className="absolute left-0 top-1/4 bottom-0 w-1.5 rounded-r-full opacity-60 transition-transform duration-700 ease-out-expo" 
+                      style={{ 
+                        background: `linear-gradient(to bottom, transparent, ${displayColor})`,
+                        transform: isTransitioning ? 'translateX(-100%)' : 'translateX(0)',
+                        transitionDelay: '200ms'
+                      }}
+                    ></div>
+                    
+                    {/* Right accent bar - animated */}
+                    <div 
+                      className="absolute right-0 top-1/2 bottom-0 w-1.5 rounded-l-full opacity-60 transition-transform duration-700 ease-out-expo" 
+                      style={{ 
+                        background: `linear-gradient(to bottom, transparent, ${displayColor})`,
+                        transform: isTransitioning ? 'translateX(100%)' : 'translateX(0)',
+                        transitionDelay: '250ms'
+                      }}
+                    ></div>
+                    
+                    {/* Content container with staggered animations - now with EXIT animations too */}
+                    <div className="relative z-10 px-5 pb-6 pt-10 text-center" key={textAnimationKey}>
+                      {/* Album-style top label - animated with exit */}
+                      <div 
+                        className="mb-3 flex items-center justify-center transition-all duration-700 ease-out-expo" 
+                        style={{ 
+                          opacity: isTransitioning ? 0 : 1, 
+                          transform: isTransitioning ? 'translateY(-8px)' : 'translateY(0)',
+                          transitionDelay: isTransitioning ? '0ms' : '100ms',
+                          pointerEvents: isTransitioning ? 'none' : 'auto'
+                        }}
+                      >
+                        <div className="h-px w-6 bg-white/30 transition-all duration-500" style={{ width: isTransitioning ? '0' : '1.5rem' }}></div>
+                        <span className="mx-2 text-[10px] font-medium tracking-widest text-white/50 uppercase">Forestmaker</span>
+                        <div className="h-px w-6 bg-white/30 transition-all duration-500" style={{ width: isTransitioning ? '0' : '1.5rem' }}></div>
+                      </div>
+                      
+                      {/* Decorative line - animated with exit */}
+                      <div 
+                        className="w-20 h-[2px] bg-white/60 mx-auto mb-4 transition-all duration-700 ease-out-expo" 
+                        style={{ 
+                          opacity: isTransitioning ? 0 : 1,
+                          width: isTransitioning ? '0' : '5rem',
+                          transitionDelay: isTransitioning ? '50ms' : '200ms'
+                        }}
+                      ></div>
+                      
+                      {/* Album-style title with dramatic typography - animated with exit */}
+                      <h2 
+                        className="text-[2rem] sm:text-[1.8rem] md:text-[2.2rem] font-black uppercase tracking-tight leading-none mb-1 text-white transition-all duration-900 ease-out-expo overflow-hidden will-change-all"
+                        style={{ 
+                          textShadow: `0 2px 20px rgba(0,0,0,0.5), 0 4px 25px rgba(0,0,0,0.3), 0 0 40px ${displayColor}30`,
+                          letterSpacing: '-0.02em',
+                          fontWeight: 900,
+                          opacity: isTransitioning ? 0 : 1,
+                          transform: isTransitioning ? 'translateY(-25px) scale(0.95)' : 'translateY(0) scale(1)',
+                          transitionDelay: isTransitioning ? '100ms' : '300ms',
+                          filter: `blur(${isTransitioning ? '3px' : '0'})`,
+                          maxHeight: isTransitioning ? '0' : '6rem',
+                          marginBottom: isTransitioning ? '0' : '0.25rem',
+                          animationName: isTransitioning ? 'slide-down' : nextImageLoaded ? 'slide-up' : 'none',
+                          animationDuration: '900ms',
+                          animationFillMode: 'forwards',
+                          animationDelay: isTransitioning ? '100ms' : '300ms',
+                          animationTimingFunction: 'cubic-bezier(0.16, 1, 0.3, 1)',
+                          wordBreak: 'break-word',
+                          hyphens: 'auto',
+                          lineHeight: '1',
+                          display: '-webkit-box',
+                          WebkitLineClamp: '2',
+                          WebkitBoxOrient: 'vertical'
+                        }}
+                      >
+                        {currentForest.name.split('-').join(' ')}
+                      </h2>
+                      
+                      {/* Subtle subtitle - animated with exit */}
+                      <p 
+                        className="text-xs uppercase tracking-[0.3em] text-white/70 font-medium mt-3 flex items-center justify-center transition-all duration-700 ease-out-expo" 
+                        style={{ 
+                          opacity: isTransitioning ? 0 : 1,
+                          transform: isTransitioning ? 'translateY(-10px)' : 'translateY(0)',
+                          marginTop: isTransitioning ? '0' : '0.75rem',
+                          transitionDelay: isTransitioning ? '150ms' : '400ms'
+                        }}
+                      >
+                        <span className="inline-block h-[1px] bg-white/40 mr-3 transition-all duration-700" style={{ width: isTransitioning ? '0' : '0.5rem' }}></span>
+                        FOREST EXPERIENCE
+                        <span className="inline-block h-[1px] bg-white/40 ml-3 transition-all duration-700" style={{ width: isTransitioning ? '0' : '0.5rem' }}></span>
+                      </p>
+                      
+                      {/* Album release year and edition - animated with exit */}
+                      <div 
+                        className="flex justify-center items-center space-x-3 mt-1 transition-all duration-700 ease-out-expo" 
+                        style={{ 
+                          opacity: isTransitioning ? 0 : 1,
+                          transform: isTransitioning ? 'translateY(-5px)' : 'translateY(0)',
+                          maxHeight: isTransitioning ? '0' : '2rem',
+                          marginTop: isTransitioning ? '0' : '0.25rem',
+                          transitionDelay: isTransitioning ? '200ms' : '500ms'
+                        }}
+                      >
+                        <span className="text-[10px] font-medium text-white/40">2024</span>
+                        <div 
+                          className="w-1 h-1 rounded-full transition-all duration-700"
+                          style={{ 
+                            backgroundColor: displayColor,
+                            transform: isTransitioning ? 'scale(0)' : 'scale(1)',
+                            transitionDelay: isTransitioning ? '0ms' : '550ms'
+                          }}
+                        ></div>
+                        <span className="text-[10px] font-medium text-white/40">IMMERSIVE EDITION</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -511,19 +655,19 @@ export default function Home() {
                       className="backdrop-blur-[2px] rounded-xl px-4 py-3 max-w-xs border
                                shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]"
                       style={{
-                        background: `linear-gradient(to bottom, ${getLighterColor(imageAverageColor, 0.9)}70, ${getLighterColor(imageAverageColor, 0.8)}80)`,
-                        borderColor: `${getLighterColor(imageAverageColor, 0.7)}40`,
+                        background: `linear-gradient(to bottom, ${getLighterColor(displayColor, 0.9)}70, ${getLighterColor(displayColor, 0.8)}80)`,
+                        borderColor: `${getLighterColor(displayColor, 0.7)}40`,
                       }}
                     >
                       <h2 
                         className="text-lg font-bold mb-1"
-                        style={{ color: getDarkerColor(imageAverageColor, 0.3) }}
+                        style={{ color: getDarkerColor(displayColor, 0.3) }}
                       >
                         Welcome to Forest Maker
                       </h2>
                       <p 
                         className="text-xs"
-                        style={{ color: getDarkerColor(imageAverageColor, 0.2) }}
+                        style={{ color: getDarkerColor(displayColor, 0.2) }}
                       >
                         Adjust the sliders below to create your perfect forest atmosphere
                       </p>
@@ -539,8 +683,8 @@ export default function Home() {
                           border shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.1)]
                           transition-colors duration-700`}
               style={{
-                background: `linear-gradient(to bottom, ${getLighterColor(imageAverageColor, 0.7)}, ${getLighterColor(imageAverageColor, 0.5)}, ${getLighterColor(imageAverageColor, 0.3)})`,
-                borderColor: `${getLighterColor(imageAverageColor, 0.4)}70`,
+                background: `linear-gradient(to bottom, ${getLighterColor(displayColor, 0.7)}, ${getLighterColor(displayColor, 0.5)}, ${getLighterColor(displayColor, 0.3)})`,
+                borderColor: `${getLighterColor(displayColor, 0.4)}70`,
                 borderWidth: '1px'
               }}
             >
@@ -549,7 +693,7 @@ export default function Home() {
                 {/* App Title */}
                 <div>
                   <h1 className="text-sm font-bold tracking-tight engraved-text">
-                    forest<span style={{ color: getDarkerColor(imageAverageColor, 0.1) }}>maker</span>
+                    forest<span style={{ color: getDarkerColor(displayColor, 0.1) }}>maker</span>
                   </h1>
                 </div>
                 
@@ -559,7 +703,7 @@ export default function Home() {
                     onClick={togglePiP}
                     className="mode-button p-1 rounded-full"
                     aria-label={isPiPVisible ? "Close PiP mode" : "Open PiP mode"}
-                    style={{ color: getDarkerColor(imageAverageColor, 0.3) }}
+                    style={{ color: getDarkerColor(displayColor, 0.3) }}
                   >
                     {isPiPVisible ? <TbPictureInPictureOff size={18} /> : <TbPictureInPicture size={18} />}
                   </button>
@@ -569,7 +713,7 @@ export default function Home() {
                     className={`mode-button p-1 rounded-full ${isSpotifyVisible ? 'active' : ''}`}
                     aria-label={isSpotifyVisible ? "Hide Spotify" : "Show Spotify"}
                   >
-                    <TbBrandSpotify className={isSpotifyVisible ? 'text-green-700' : ''} style={!isSpotifyVisible ? { color: getDarkerColor(imageAverageColor, 0.3) } : {}} size={18} />
+                    <TbBrandSpotify className={isSpotifyVisible ? 'text-green-700' : ''} style={!isSpotifyVisible ? { color: getDarkerColor(displayColor, 0.3) } : {}} size={18} />
                   </button>
                 </div>
               </div>
@@ -582,9 +726,9 @@ export default function Home() {
                 <button 
                   className="mode-button active text-xs font-medium px-4 py-1 rounded-full engraved-text" 
                   style={{ 
-                    backgroundColor: getLighterColor(imageAverageColor, 0.8),
-                    borderColor: getDarkerColor(imageAverageColor, 0.1),
-                    color: getDarkerColor(imageAverageColor, 0.4),
+                    backgroundColor: getLighterColor(displayColor, 0.8),
+                    borderColor: getDarkerColor(displayColor, 0.1),
+                    color: getDarkerColor(displayColor, 0.4),
                     boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 2px rgba(0,0,0,0.05)'
                   }}
                 >
@@ -592,13 +736,13 @@ export default function Home() {
                 </button>
                 <button 
                   className="mode-button text-xs font-medium px-4 py-1 rounded-full engraved-text" 
-                  style={{ color: getDarkerColor(imageAverageColor, 0.2) }}
+                  style={{ color: getDarkerColor(displayColor, 0.2) }}
                 >
                   Slow
                 </button>
                 <button 
                   className="mode-button text-xs font-medium px-4 py-1 rounded-full engraved-text" 
-                  style={{ color: getDarkerColor(imageAverageColor, 0.2) }}
+                  style={{ color: getDarkerColor(displayColor, 0.2) }}
                 >
                   Auto
                 </button>

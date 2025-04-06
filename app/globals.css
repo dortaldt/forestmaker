@@ -489,77 +489,81 @@ input[type="range"]:active::-moz-range-thumb {
   background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
 }
 
-/* Glass screen effects */
-
-/* Screen flickering effect */
-@keyframes screenFlicker {
-  0% { opacity: 1; }
-  1% { opacity: 0.985; }
-  2% { opacity: 1; }
-  45% { opacity: 1; }
-  46% { opacity: 0.97; }
-  47% { opacity: 1; }
-  78% { opacity: 1; }
-  79% { opacity: 0.99; }
-  80% { opacity: 1; }
-  95% { opacity: 1; }
-  96% { opacity: 0.96; }
-  97% { opacity: 1; }
+/* Custom transition timing functions */
+.ease-out-expo {
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.screen-flicker {
-  animation: screenFlicker 8s infinite ease-in-out;
+.ease-out-back {
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Radial glare effect */
-.radial-glare {
-  background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
-  animation: moveGlare 20s infinite alternate ease-in-out;
+/* Smooth cubic ease */
+.ease-cubic {
+  transition-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
 }
 
-@keyframes moveGlare {
-  0% { transform: translateX(0) translateY(0); }
-  25% { transform: translateX(-5%) translateY(5%); }
-  50% { transform: translateX(5%) translateY(-5%); }
-  75% { transform: translateX(-5%) translateY(-5%); }
-  100% { transform: translateX(5%) translateY(5%); }
+/* Subtle elastic return */
+.ease-elastic {
+  transition-timing-function: cubic-bezier(0.25, 1.2, 0.5, 1);
 }
 
-/* Chromatic aberration effect */
-.chromatic-aberration {
-  position: relative;
-  isolation: isolate;
+/* Fix for transition-width property that may not exist */
+.transition-width {
+  transition-property: width;
 }
 
-.chromatic-aberration::before,
-.chromatic-aberration::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-blend-mode: screen;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+/* High-performance animation hints */
+.will-change-all {
+  will-change: transform, opacity, filter;
 }
 
-.chromatic-aberration::before {
-  background-color: rgba(255, 0, 0, 0.05);
-  transform: translate(-1px, 0);
+/* Cross-fade animation */
+@keyframes cross-fade-in {
+  0% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
 }
 
-.chromatic-aberration::after {
-  background-color: rgba(0, 0, 255, 0.05);
-  transform: translate(1px, 0);
+@keyframes cross-fade-out {
+  0% {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(5px);
+    transform: scale(1.05);
+  }
 }
 
-/* Gradient utility for glass effects */
-.bg-gradient-radial {
-  background-image: radial-gradient(var(--tw-gradient-stops));
+/* Text stagger animations */
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Glass backface visibility */
-.backface-hidden {
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
+@keyframes slide-down {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
 }
