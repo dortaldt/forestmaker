@@ -290,58 +290,35 @@ export default function SoundEqualizer({ onSoundChange }: SoundEqualizerProps) {
   }, [playSoundWithThrottle]);
 
   return (
-    <div className="w-full h-full flex items-center">
-      <div className="max-w-3xl mx-auto w-full px-2">
-        {/* Spotify Volume Control - only shown when logged in, now with skeuomorphic styling */}
-        {isSpotifyLoggedIn && (
-          <div className="mb-3">
-            <div>
-              <SpotifyVolumeControl />
-            </div>
-          </div>
-        )}
-        
-        {/* Sound controls */}
-        <div>
-          {/* Grid layout for all screens - tighter gaps and bigger buttons */}
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 md:gap-2 mx-auto">
-            {Object.entries(sounds).map(([sound, state]) => {
-              const Icon = soundIcons[sound as keyof typeof soundIcons];
-              const hasAudio = hasAudioAsset(sound);
-              const isActive = state.isActive;
-              
-              return (
-                <div 
-                  id={`sound-control-${sound}`} 
-                  key={`sound-${sound}`} 
-                  className="aspect-square relative flex items-center justify-center overflow-visible"
-                >
-                  <ExpandableSlider 
-                    icon={Icon}
-                    label={soundLabels[sound as keyof typeof soundLabels]}
-                    initialValue={state.value * 100}
-                    min={0}
-                    max={100}
-                    onChange={(newValue) => handleSliderChange(sound as SoundType, newValue / 100)}
-                    disabled={!hasAudio}
-                    activeColor={hasAudio ? "orange-400" : "gray-400"}
-                    className="w-full h-full rounded-xl"
-                  />
-                </div>
-              );
-            })}
-          </div>
-          
-          {/* Small manufacturer label at bottom */}
-          <div className="mt-2 flex justify-center">
-            <div className="px-2 py-0.5 rounded-md 
-                          bg-gradient-to-b from-gray-200/40 to-gray-300/40 
-                          border border-gray-400/20
-                          backdrop-filter backdrop-blur-[2px]
-                          shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]">
-              <span className="text-xs font-medium text-gray-700">ForestMaker Pro Series</span>
-            </div>
-          </div>
+    <div className="w-full h-full">
+      {/* Sound controls grid for ALL sounds */}
+      <div className="mt-2">
+        <div className="grid grid-cols-4 gap-2 mx-auto">
+          {Object.entries(sounds).map(([sound, state]) => {
+            const Icon = soundIcons[sound as keyof typeof soundIcons];
+            const hasAudio = hasAudioAsset(sound);
+            const isActive = state.isActive;
+            
+            return (
+              <div 
+                id={`sound-control-${sound}`} 
+                key={`sound-${sound}`} 
+                className="aspect-square relative flex items-center justify-center overflow-visible"
+              >
+                <ExpandableSlider 
+                  icon={Icon}
+                  label={soundLabels[sound as keyof typeof soundLabels]}
+                  initialValue={state.value * 100}
+                  min={0}
+                  max={100}
+                  onChange={(newValue) => handleSliderChange(sound as SoundType, newValue / 100)}
+                  disabled={!hasAudio}
+                  activeColor={hasAudio ? "orange-400" : "gray-400"}
+                  className="w-full h-full rounded-xl"
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
