@@ -342,54 +342,152 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/50"></div>
       </div>
 
-      {/* Device Container - New skeuomorphic container */}
+      {/* Device Container - New skeuomorphic container with color glow */}
       <div className="relative h-full flex flex-col items-center justify-center z-10">
-        <div className="device-container w-full sm:max-w-md h-full sm:h-auto mx-auto my-auto">
+        <div 
+          className="device-container w-full sm:max-w-md h-full sm:h-auto mx-auto my-auto"
+          style={{ 
+            filter: `drop-shadow(0 0 20px ${imageAverageColor}60)`
+          }}
+        >
           {/* Device Frame - now themed based on forest */}
           <div 
             className={`device-frame rounded-3xl sm:rounded-3xl overflow-hidden shadow-xl pt-3 pb-3
                      h-full sm:h-auto border-2 transition-colors duration-700 relative
                      flex flex-col shadow-[0_6px_20px_rgba(0,0,0,0.15),inset_0_1px_3px_rgba(255,255,255,0.6)]`}
             style={{
-              background: `linear-gradient(to bottom, ${imageAverageColor}, ${getDarkerColor(imageAverageColor, 0.3)})`,
-              borderColor: getDarkerColor(imageAverageColor, 0.1)
+              background: `linear-gradient(to bottom, ${imageAverageColor}, ${getDarkerColor(imageAverageColor, 0.4)})`,
+              borderColor: getDarkerColor(imageAverageColor, 0.15),
+              borderWidth: '2px'
             }}
           >
             
-            {/* Plastic shine effect */}
+            {/* Plastic shine effect - enhanced to better show the color */}
             <div className="absolute inset-0 z-0 pointer-events-none">
-              <div className="absolute inset-x-0 top-0 h-[15%] bg-gradient-to-b from-white/40 to-transparent"></div>
+              <div className="absolute inset-x-0 top-0 h-[15%] bg-gradient-to-b from-white/30 to-transparent"></div>
               <div className="absolute left-0 right-0 top-[15%] h-[10%] bg-gradient-to-b from-transparent via-white/5 to-transparent"></div>
-              <div className="absolute right-0 bottom-[40%] w-[10%] h-[40%] bg-gradient-to-l from-white/30 to-transparent"></div>
+              <div className="absolute right-0 bottom-[40%] w-[10%] h-[40%] bg-gradient-to-l from-white/20 to-transparent"></div>
               <div className="absolute left-[5%] top-[30%] w-[15%] h-[5%] bg-radial-gradient rounded-full opacity-20"></div>
             </div>
             
-            {/* Device Screen - Enhanced skeuomorphic design */}
-            <div className="device-screen relative rounded-xl overflow-hidden mx-4 mb-4 z-10
-                         flex-grow sm:flex-grow-0 sm:h-56 border-[3px] border-gray-400/30
-                         shadow-[inset_0_0_10px_rgba(0,0,0,0.2),0_2px_3px_rgba(0,0,0,0.1)]">
+            {/* Device Screen - Enhanced glass-like design with theme colors */}
+            <div 
+              className="device-screen relative rounded-xl overflow-hidden mx-4 mb-4 z-10
+                       flex-grow sm:flex-grow-0 sm:h-56 group hover:transform-gpu"
+              style={{
+                border: `3px solid ${getDarkerColor(imageAverageColor, 0.3)}80`,
+                boxShadow: `
+                  inset 0 0 10px rgba(0,0,0,0.3), 
+                  inset 0 0 2px rgba(255,255,255,0.2),
+                  0 2px 8px ${getDarkerColor(imageAverageColor, 0.3)}50,
+                  0 15px 20px -10px rgba(0,0,0,0.3)
+                `,
+                background: 'rgba(20,20,20,0.02)',
+                backdropFilter: 'blur(0.5px)',
+                isolation: 'isolate',
+                transition: 'transform 0.3s ease-out, box-shadow 0.3s ease-out',
+                transformStyle: 'preserve-3d'
+              }}
+              onMouseMove={(e) => {
+                if (typeof window !== 'undefined') {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left; // x position within the element
+                  const y = e.clientY - rect.top;  // y position within the element
+                  const centerX = rect.width / 2;
+                  const centerY = rect.height / 2;
+                  const tiltX = (y - centerY) / 30; // Calculate tilt angle
+                  const tiltY = -(x - centerX) / 30;
+                  
+                  e.currentTarget.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.01, 1.01, 1.01)`;
+                  
+                  // Update reflection angle to follow mouse
+                  const reflections = e.currentTarget.querySelectorAll('.glass-reflection');
+                  reflections.forEach((el: any) => {
+                    el.style.opacity = '0.7';
+                    el.style.transform = `translate(${tiltY * 10}px, ${tiltX * 10}px)`;
+                  });
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
+                const reflections = e.currentTarget.querySelectorAll('.glass-reflection');
+                reflections.forEach((el: any) => {
+                  el.style.opacity = '0.5';
+                  el.style.transform = 'translate(0px, 0px)';
+                });
+              }}
+            >
+              {/* Screen glass depth effect with subtle parallax */}
+              <div className="absolute inset-0 bg-gradient-radial from-transparent to-black/5 opacity-40"></div>
+              
               {/* Screen content - forest image */}
-              <div className="absolute inset-0">
+              <div className="absolute inset-0 backface-hidden"
+                   style={{ transform: 'translateZ(0)' }}>
                 <Image
                   src={currentForest?.imageUrl || '/assets/images/forest1.png'}
                   alt={currentForest?.name || 'Default Forest'}
                   fill
                   priority
-                  className="object-cover"
+                  className="object-cover screen-flicker"
                   sizes="100vw"
                   quality={90}
                 />
-                {/* Screen glare effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-black/5 pointer-events-none"></div>
               </div>
               
-              {/* Screen texture - subtle scanlines and noise */}
-              <div className="screen-texture absolute inset-0 pointer-events-none
-                           bg-[linear-gradient(transparent_50%,rgba(0,0,0,.02)_50%)] bg-[length:100%_2px]"></div>
+              {/* Glass reflections - layered for more realism */}
+              <div className="absolute inset-0 pointer-events-none transition-opacity duration-300 group-hover:opacity-70 glass-reflection"
+                   style={{ 
+                     opacity: 0.5,
+                     transition: 'transform 0.3s ease-out, opacity 0.3s ease-out'
+                   }}>
+                {/* Top highlight reflection */}
+                <div className="absolute inset-x-0 top-0 h-[30%] bg-gradient-to-b from-white/20 to-transparent transform -skew-y-3"></div>
+                
+                {/* Subtle side glare */}
+                <div className="absolute left-[3%] top-[5%] bottom-[5%] w-[15%] bg-gradient-to-r from-white/8 to-transparent rounded-full blur-[2px]"></div>
+                
+                {/* Bottom light refraction */}
+                <div className="absolute left-[10%] right-[10%] bottom-0 h-[15%] bg-gradient-to-t from-white/5 to-transparent"></div>
+                
+                {/* Angled highlight streak */}
+                <div className="absolute -right-[10%] top-[20%] w-[50%] h-[20%] bg-gradient-to-l from-white/15 to-transparent transform rotate-[25deg] blur-[1px]"></div>
+
+                {/* Subtle circular glare */}
+                <div className="absolute right-[15%] bottom-[25%] w-[30%] h-[20%] rounded-full radial-glare opacity-40"></div>
+              </div>
               
-              {/* Screen inner shadow */}
-              <div className="screen-inner-shadow absolute inset-0 pointer-events-none
-                           shadow-[inset_0_0_15px_rgba(0,0,0,0.3),inset_0_0_3px_rgba(0,0,0,0.5)]"></div>
+              {/* Glass texture - improved with scanlines and subtle noise */}
+              <div className="absolute inset-0 mix-blend-overlay opacity-30 pointer-events-none">
+                <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(120,120,120,.02)_50%)] bg-[length:100%_2px]"></div>
+                <div className="absolute inset-0" style={{ 
+                  backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")',
+                  backgroundBlendMode: 'soft-light',
+                  opacity: 0.03
+                }}></div>
+              </div>
+
+              {/* Chromatic aberration effect */}
+              <div className="absolute inset-0 pointer-events-none chromatic-aberration mix-blend-hard-light opacity-20"></div>
+              
+              {/* Screen inner shadow with theme color */}
+              <div className="screen-inner-shadow absolute inset-0 pointer-events-none"
+                   style={{
+                     boxShadow: `
+                       inset 0 0 15px rgba(0,0,0,0.4), 
+                       inset 0 0 5px rgba(0,0,0,0.6),
+                       inset 0 0 30px ${getDarkerColor(imageAverageColor, 0.2)}40,
+                       inset 0 0 1px rgba(255,255,255,0.4)
+                     `
+                   }}
+              ></div>
+              
+              {/* Glass edge highlight */}
+              <div className="absolute inset-0 pointer-events-none rounded-xl"
+                   style={{
+                     border: '1px solid rgba(255,255,255,0.15)',
+                     boxShadow: 'inset 0 0 1px rgba(255,255,255,0.3)'
+                   }}
+              ></div>
               
               {/* Forest information overlay - Integrated ForestMatch here */}
               {currentForest ? (
@@ -409,12 +507,24 @@ export default function Home() {
               ) : (
                 hasInteracted && imagesLoaded && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="backdrop-blur-[2px] rounded-xl px-4 py-3 max-w-xs
-                               bg-gradient-to-b from-gray-200/40 to-gray-300/40 
-                               border border-gray-400/20
-                               shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]">
-                      <h2 className="text-lg font-bold mb-1 text-gray-800">Welcome to Forest Maker</h2>
-                      <p className="text-xs text-gray-700">
+                    <div 
+                      className="backdrop-blur-[2px] rounded-xl px-4 py-3 max-w-xs border
+                               shadow-[0_2px_10px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.3)]"
+                      style={{
+                        background: `linear-gradient(to bottom, ${getLighterColor(imageAverageColor, 0.9)}70, ${getLighterColor(imageAverageColor, 0.8)}80)`,
+                        borderColor: `${getLighterColor(imageAverageColor, 0.7)}40`,
+                      }}
+                    >
+                      <h2 
+                        className="text-lg font-bold mb-1"
+                        style={{ color: getDarkerColor(imageAverageColor, 0.3) }}
+                      >
+                        Welcome to Forest Maker
+                      </h2>
+                      <p 
+                        className="text-xs"
+                        style={{ color: getDarkerColor(imageAverageColor, 0.2) }}
+                      >
                         Adjust the sliders below to create your perfect forest atmosphere
                       </p>
                     </div>
@@ -423,15 +533,15 @@ export default function Home() {
               )}
             </div>
             
-            {/* Controls Panel */}
+            {/* Controls Panel - more prominent colors */}
             <div 
               className={`equalizer-container relative z-10 mt-0 sm:mt-4 mb-auto sm:mb-0 pt-3 pb-4 px-4 rounded-xl mx-4
-                          border border-white/40 
-                          shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.1)]
+                          border shadow-[inset_0_1px_1px_rgba(255,255,255,0.9),0_1px_3px_rgba(0,0,0,0.1)]
                           transition-colors duration-700`}
               style={{
-                background: `linear-gradient(to bottom, ${getLighterColor(imageAverageColor, 0.85)}, ${getLighterColor(imageAverageColor, 0.7)}, rgba(255,255,255,0.9))`,
-                borderColor: `${getLighterColor(imageAverageColor, 0.6)}40`
+                background: `linear-gradient(to bottom, ${getLighterColor(imageAverageColor, 0.7)}, ${getLighterColor(imageAverageColor, 0.5)}, ${getLighterColor(imageAverageColor, 0.3)})`,
+                borderColor: `${getLighterColor(imageAverageColor, 0.4)}70`,
+                borderWidth: '1px'
               }}
             >
               {/* Fixed header with app title and controls */}
@@ -439,7 +549,7 @@ export default function Home() {
                 {/* App Title */}
                 <div>
                   <h1 className="text-sm font-bold tracking-tight engraved-text">
-                    forest<span className="text-orange-500">maker</span>
+                    forest<span style={{ color: getDarkerColor(imageAverageColor, 0.1) }}>maker</span>
                   </h1>
                 </div>
                 
@@ -449,8 +559,9 @@ export default function Home() {
                     onClick={togglePiP}
                     className="mode-button p-1 rounded-full"
                     aria-label={isPiPVisible ? "Close PiP mode" : "Open PiP mode"}
+                    style={{ color: getDarkerColor(imageAverageColor, 0.3) }}
                   >
-                    {isPiPVisible ? <TbPictureInPictureOff size={18} className="text-gray-700" /> : <TbPictureInPicture size={18} className="text-gray-700" />}
+                    {isPiPVisible ? <TbPictureInPictureOff size={18} /> : <TbPictureInPicture size={18} />}
                   </button>
                   
                   <button
@@ -458,7 +569,7 @@ export default function Home() {
                     className={`mode-button p-1 rounded-full ${isSpotifyVisible ? 'active' : ''}`}
                     aria-label={isSpotifyVisible ? "Hide Spotify" : "Show Spotify"}
                   >
-                    <TbBrandSpotify className={isSpotifyVisible ? 'text-green-700' : 'text-gray-700'} size={18} />
+                    <TbBrandSpotify className={isSpotifyVisible ? 'text-green-700' : ''} style={!isSpotifyVisible ? { color: getDarkerColor(imageAverageColor, 0.3) } : {}} size={18} />
                   </button>
                 </div>
               </div>
@@ -466,11 +577,31 @@ export default function Home() {
               {/* Sound Equalizer */}
               <SoundEqualizer onSoundChange={handleSoundChange} />
               
-              {/* Mode buttons - simpler layout */}
+              {/* Mode buttons - themed colors */}
               <div className="flex justify-center mt-4 space-x-3">
-                <button className="mode-button active text-xs font-medium px-4 py-1 rounded-full engraved-text">Fast</button>
-                <button className="mode-button text-xs font-medium px-4 py-1 rounded-full text-gray-500 engraved-text">Slow</button>
-                <button className="mode-button text-xs font-medium px-4 py-1 rounded-full text-gray-500 engraved-text">Auto</button>
+                <button 
+                  className="mode-button active text-xs font-medium px-4 py-1 rounded-full engraved-text" 
+                  style={{ 
+                    backgroundColor: getLighterColor(imageAverageColor, 0.8),
+                    borderColor: getDarkerColor(imageAverageColor, 0.1),
+                    color: getDarkerColor(imageAverageColor, 0.4),
+                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                >
+                  Fast
+                </button>
+                <button 
+                  className="mode-button text-xs font-medium px-4 py-1 rounded-full engraved-text" 
+                  style={{ color: getDarkerColor(imageAverageColor, 0.2) }}
+                >
+                  Slow
+                </button>
+                <button 
+                  className="mode-button text-xs font-medium px-4 py-1 rounded-full engraved-text" 
+                  style={{ color: getDarkerColor(imageAverageColor, 0.2) }}
+                >
+                  Auto
+                </button>
               </div>
             </div>
           </div>
